@@ -7,10 +7,7 @@ export const MarginControls = () => {
     marginTop,
     marginBottom,
     marginUnit,
-    setMarginLeft,
-    setMarginRight,
-    setMarginTop,
-    setMarginBottom,
+    update,
     setMarginUnit
   } = useAppStore()
 
@@ -34,7 +31,7 @@ export const MarginControls = () => {
         <input
           type="number"
           value={marginLeft}
-          onChange={(e) => setMarginLeft(Number(e.target.value))}
+          onChange={(e) => update('marginLeft', Number(e.target.value))}
           style={{ marginLeft: '0.5em', width: '60px' }}
           step={marginUnit === 'mm' ? '0.1' : '0.01'}
         />
@@ -44,7 +41,7 @@ export const MarginControls = () => {
         <input
           type="number"
           value={marginRight}
-          onChange={(e) => setMarginRight(Number(e.target.value))}
+          onChange={(e) => update('marginRight', Number(e.target.value))}
           style={{ marginLeft: '0.5em', width: '60px' }}
           step={marginUnit === 'mm' ? '0.1' : '0.01'}
         />
@@ -54,7 +51,7 @@ export const MarginControls = () => {
         <input
           type="number"
           value={marginTop}
-          onChange={(e) => setMarginTop(Number(e.target.value))}
+          onChange={(e) => update('marginTop', Number(e.target.value))}
           style={{ marginLeft: '0.5em', width: '60px' }}
           step={marginUnit === 'mm' ? '0.1' : '0.01'}
         />
@@ -64,7 +61,7 @@ export const MarginControls = () => {
         <input
           type="number"
           value={marginBottom}
-          onChange={(e) => setMarginBottom(Number(e.target.value))}
+          onChange={(e) => update('marginBottom', Number(e.target.value))}
           style={{ marginLeft: '0.5em', width: '60px' }}
           step={marginUnit === 'mm' ? '0.1' : '0.01'}
         />

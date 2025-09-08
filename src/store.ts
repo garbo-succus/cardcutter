@@ -17,6 +17,7 @@ interface AppState {
   marginUnit: 'mm' | 'inches'
   pageDimensions: {[key: string]: {width: number, height: number}}
 
+  update: <K extends keyof Omit<AppState, 'update'>>(key: K, value: AppState[K]) => void
   setMode: (mode: 'single' | 'separate') => void
   setFile1: (file: File | null) => void
   setNumPages1: (numPages: number) => void
@@ -51,6 +52,7 @@ export const useAppStore = create<AppState>((set) => ({
   marginUnit: 'mm',
   pageDimensions: {},
 
+  update: (key, value) => set({ [key]: value } as any),
   setMode: (mode) => set({ mode }),
   setFile1: (file1) => set({ file1 }),
   setNumPages1: (numPages1) => set({ numPages1 }),

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
+import { useAppStore } from './store'
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -94,10 +95,11 @@ function App() {
   
   const [columns, setColumns] = useState<number>(4)
   const [rows, setRows] = useState<number>(2)
-  const [marginLeft, setMarginLeft] = useState<number>(0)
-  const [marginRight, setMarginRight] = useState<number>(0)
-  const [marginTop, setMarginTop] = useState<number>(0)
-  const [marginBottom, setMarginBottom] = useState<number>(0)
+  const marginLeft = useAppStore((state) => state.marginLeft)
+  const marginRight = useAppStore((state) => state.marginRight)
+  const marginTop = useAppStore((state) => state.marginTop)
+  const marginBottom = useAppStore((state) => state.marginBottom)
+  const update = useAppStore((state) => state.update)
   const [columnSpacing, setColumnSpacing] = useState<number>(0)
   const [rowSpacing, setRowSpacing] = useState<number>(0)
   const [startPage, setStartPage] = useState<number>(1)
@@ -306,7 +308,7 @@ function App() {
           <input
             type="number"
             value={marginLeft}
-            onChange={(e) => setMarginLeft(Number(e.target.value))}
+            onChange={(e) => update('marginLeft', Number(e.target.value))}
             style={{ marginLeft: '0.5em', width: '60px' }}
             step="0.1"
             min="0"
@@ -315,7 +317,7 @@ function App() {
           <input
             type="number"
             value={Math.round((marginLeft / 25.4) * 100) / 100}
-            onChange={(e) => setMarginLeft(Number(e.target.value) * 25.4)}
+            onChange={(e) => update('marginLeft', Number(e.target.value) * 25.4)}
             style={{ marginLeft: '0.25em', width: '60px' }}
             step="0.01"
             min="0"
@@ -326,7 +328,7 @@ function App() {
           <input
             type="number"
             value={marginRight}
-            onChange={(e) => setMarginRight(Number(e.target.value))}
+            onChange={(e) => update('marginRight', Number(e.target.value))}
             style={{ marginLeft: '0.5em', width: '60px' }}
             step="0.1"
             min="0"
@@ -335,7 +337,7 @@ function App() {
           <input
             type="number"
             value={Math.round((marginRight / 25.4) * 100) / 100}
-            onChange={(e) => setMarginRight(Number(e.target.value) * 25.4)}
+            onChange={(e) => update('marginRight', Number(e.target.value) * 25.4)}
             style={{ marginLeft: '0.25em', width: '60px' }}
             step="0.01"
             min="0"
@@ -346,7 +348,7 @@ function App() {
           <input
             type="number"
             value={marginTop}
-            onChange={(e) => setMarginTop(Number(e.target.value))}
+            onChange={(e) => update('marginTop', Number(e.target.value))}
             style={{ marginLeft: '0.5em', width: '60px' }}
             step="0.1"
             min="0"
@@ -355,7 +357,7 @@ function App() {
           <input
             type="number"
             value={Math.round((marginTop / 25.4) * 100) / 100}
-            onChange={(e) => setMarginTop(Number(e.target.value) * 25.4)}
+            onChange={(e) => update('marginTop', Number(e.target.value) * 25.4)}
             style={{ marginLeft: '0.25em', width: '60px' }}
             step="0.01"
             min="0"
@@ -366,7 +368,7 @@ function App() {
           <input
             type="number"
             value={marginBottom}
-            onChange={(e) => setMarginBottom(Number(e.target.value))}
+            onChange={(e) => update('marginBottom', Number(e.target.value))}
             style={{ marginLeft: '0.5em', width: '60px' }}
             step="0.1"
             min="0"
@@ -375,7 +377,7 @@ function App() {
           <input
             type="number"
             value={Math.round((marginBottom / 25.4) * 100) / 100}
-            onChange={(e) => setMarginBottom(Number(e.target.value) * 25.4)}
+            onChange={(e) => update('marginBottom', Number(e.target.value) * 25.4)}
             style={{ marginLeft: '0.25em', width: '60px' }}
             step="0.01"
             min="0"
