@@ -576,29 +576,30 @@ function App() {
               )
             ) : (
               // Separate PDF mode: 2 pages per line (front and back side by side)
-              <>
-                {Math.max(numPages1, numPages2) > 0 && Array.from(new Array(Math.max(numPages1, numPages2)), (el, index) => {
-                  const pageNumber = index + 1
-                  const effectiveFinishPage = finishPage || Math.max(numPages1, numPages2)
-                  const isInRange = pageNumber >= startPage && pageNumber <= effectiveFinishPage
-                  
-                  return (
-                    <div key={`page-pair-${pageNumber}`} style={{ 
-                      margin: '0 0 2em 0', 
-                      padding: 0, 
-                      display: 'flex', 
-                      gap: '2em',
-                      alignItems: 'flex-start'
-                    }}>
-                      {/* Front page */}
-                      {file1 && pageNumber <= numPages1 && (
-                        <div style={{ flex: '1', position: 'relative' }}>
-                          <Document file={file1} onLoadSuccess={onDocument1LoadSuccess}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2em' }}>
+                {/* Front PDF Document */}
+                {file1 && (
+                  <Document file={file1} onLoadSuccess={onDocument1LoadSuccess} key="front-doc">
+                    {Array.from(new Array(numPages1), (el, index) => {
+                      const pageNumber = index + 1
+                      const effectiveFinishPage = finishPage || Math.max(numPages1, numPages2)
+                      const isInRange = pageNumber >= startPage && pageNumber <= effectiveFinishPage
+                      
+                      return (
+                        <div key={`page-pair-${pageNumber}`} style={{ 
+                          margin: '0 0 2em 0', 
+                          padding: 0, 
+                          display: 'flex', 
+                          gap: '2em',
+                          alignItems: 'flex-start'
+                        }}>
+                          {/* Front page */}
+                          <div style={{ flex: '1', position: 'relative', minWidth: 0 }} className="front-page-container">
                             <Page 
                               pageNumber={pageNumber}
                               onRenderSuccess={() => {
                                 setTimeout(() => {
-                                  const pageElement = document.querySelector(`[data-page-number="${pageNumber}"]`) as HTMLElement
+                                  const pageElement = document.querySelector(`.front-page-container [data-page-number="${pageNumber}"]`) as HTMLElement
                                   if (pageElement) {
                                     const canvas = pageElement.querySelector('canvas')
                                     if (canvas) {
@@ -644,79 +645,94 @@ function App() {
                                     pointerEvents: 'none'
                                   }}
                                 >
-                                  Page {pageNumber}
+                                  Front Page {pageNumber}
                                 </div>
                               </>
                             )}
-                          </Document>
-                        </div>
-                      )}
-                      
-                      {/* Back page */}
-                      {file2 && pageNumber <= numPages2 && (
-                        <div style={{ flex: '1', position: 'relative' }}>
-                          <Document file={file2} onLoadSuccess={onDocument2LoadSuccess}>
-                            <Page 
-                              pageNumber={pageNumber}
-                              onRenderSuccess={() => {
-                                setTimeout(() => {
-                                  const pageElement = document.querySelector(`[data-page-number="${pageNumber}"]`) as HTMLElement
-                                  if (pageElement) {
-                                    const canvas = pageElement.querySelector('canvas')
-                                    if (canvas) {
-                                      setPageDimensions(prev => ({
-                                        ...prev,
-                                        [`page2_${pageNumber}`]: { width: canvas.clientWidth, height: canvas.clientHeight }
-                                      }))
-                                    }
-                                  }
-                                }, 100)
-                              }}
-                            />
-                            {pageDimensions[`page2_${pageNumber}`] && (
-                              <>
-                                {isInRange && (
-                                  <div 
-                                    className="grid-overlay-container"
-                                    style={{
-                                      position: 'absolute',
-                                      top: 0,
-                                      left: 0,
-                                      pointerEvents: 'none'
-                                    }}
-                                  >
-                                    <GridOverlay 
-                                      pageWidth={pageDimensions[`page2_${pageNumber}`].width} 
-                                      pageHeight={pageDimensions[`page2_${pageNumber}`].height} 
-                                      isBackPage={true}
-                                      pageOffset={pageNumber - startPage}
-                                    />
-                                  </div>
-                                )}
-                                <div
-                                  style={{
-                                    position: 'absolute',
-                                    bottom: '4px',
-                                    right: '4px',
-                                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                                    color: 'white',
-                                    padding: '2px 6px',
-                                    borderRadius: '3px',
-                                    fontSize: '12px',
-                                    pointerEvents: 'none'
+                          </div>
+                          
+                          {/* Back page */}
+                          {file2 ? (
+                            <div style={{ flex: '1', position: 'relative', minWidth: 0 }} className="back-page-container">
+                              <Document file={file2} onLoadSuccess={onDocument2LoadSuccess} key="back-doc">
+                                <Page 
+                                  pageNumber={pageNumber}
+                                  onRenderSuccess={() => {
+                                    setTimeout(() => {
+                                      const pageElement = document.querySelector(`.back-page-container [data-page-number="${pageNumber}"]`) as HTMLElement
+                                      if (pageElement) {
+                                        const canvas = pageElement.querySelector('canvas')
+                                        if (canvas) {
+                                          setPageDimensions(prev => ({
+                                            ...prev,
+                                            [`page2_${pageNumber}`]: { width: canvas.clientWidth, height: canvas.clientHeight }
+                                          }))
+                                        }
+                                      }
+                                    }, 100)
                                   }}
-                                >
-                                  Page {pageNumber}
-                                </div>
-                              </>
-                            )}
-                          </Document>
+                                />
+                                {pageDimensions[`page2_${pageNumber}`] && (
+                                  <>
+                                    {isInRange && (
+                                      <div 
+                                        className="grid-overlay-container"
+                                        style={{
+                                          position: 'absolute',
+                                          top: 0,
+                                          left: 0,
+                                          pointerEvents: 'none'
+                                        }}
+                                      >
+                                        <GridOverlay 
+                                          pageWidth={pageDimensions[`page2_${pageNumber}`].width} 
+                                          pageHeight={pageDimensions[`page2_${pageNumber}`].height} 
+                                          isBackPage={true}
+                                          pageOffset={pageNumber - startPage}
+                                        />
+                                      </div>
+                                    )}
+                                    <div
+                                      style={{
+                                        position: 'absolute',
+                                        bottom: '4px',
+                                        right: '4px',
+                                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                        color: 'white',
+                                        padding: '2px 6px',
+                                        borderRadius: '3px',
+                                        fontSize: '12px',
+                                        pointerEvents: 'none'
+                                      }}
+                                    >
+                                      Back Page {pageNumber}
+                                    </div>
+                                  </>
+                                )}
+                              </Document>
+                            </div>
+                          ) : (
+                            <div style={{ flex: '1', position: 'relative', minWidth: 0 }} className="back-page-placeholder">
+                              <div style={{ 
+                                border: '2px dashed #ccc', 
+                                padding: '2em', 
+                                textAlign: 'center', 
+                                color: '#666',
+                                minHeight: '200px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}>
+                                No back PDF loaded
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </>
+                      )
+                    })}
+                  </Document>
+                )}
+              </div>
             )}
           </div>
         </div>
