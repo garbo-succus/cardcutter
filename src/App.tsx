@@ -99,14 +99,14 @@ function App() {
   const marginRight = useAppStore((state) => state.marginRight)
   const marginTop = useAppStore((state) => state.marginTop)
   const marginBottom = useAppStore((state) => state.marginBottom)
+  const rotation = useAppStore((state) => state.rotation)
+  const outlineColor = useAppStore((state) => state.outlineColor)
+  const dpi = useAppStore((state) => state.dpi)
   const update = useAppStore((state) => state.update)
   const [columnSpacing, setColumnSpacing] = useState<number>(0)
   const [rowSpacing, setRowSpacing] = useState<number>(0)
   const [startPage, setStartPage] = useState<number>(1)
   const [finishPage, setFinishPage] = useState<number | null>(null)
-  const [rotation, setRotation] = useState<number>(0)
-  const [outlineColor, setOutlineColor] = useState<string>('red')
-  const [dpi, setDpi] = useState<number>(300)
   const [pageDimensions, setPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
 
   const onFile1Change = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -427,7 +427,7 @@ function App() {
           Rotation:
           <select
             value={rotation}
-            onChange={(e) => setRotation(Number(e.target.value))}
+            onChange={(e) => update('rotation', Number(e.target.value))}
             style={{ marginLeft: '0.5em' }}
           >
             <option value={0}>0°</option>
@@ -440,7 +440,7 @@ function App() {
           Outline Color:
           <select
             value={outlineColor}
-            onChange={(e) => setOutlineColor(e.target.value)}
+            onChange={(e) => update('outlineColor', e.target.value)}
             style={{ marginLeft: '0.5em' }}
           >
             <option value="red">Red</option>
@@ -453,7 +453,7 @@ function App() {
           <input
             type="number"
             value={dpi}
-            onChange={(e) => setDpi(Number(e.target.value))}
+            onChange={(e) => update('dpi', Number(e.target.value))}
             style={{ marginLeft: '0.5em', width: '60px' }}
             min="72"
             step="1"

@@ -14,6 +14,7 @@ interface AppState {
   marginBottom: number
   rotation: number
   outlineColor: string
+  dpi: number
   marginUnit: 'mm' | 'inches'
   pageDimensions: {[key: string]: {width: number, height: number}}
 
@@ -31,6 +32,7 @@ interface AppState {
   setMarginBottom: (margin: number) => void
   setRotation: (rotation: number) => void
   setOutlineColor: (color: string) => void
+  setDpi: (dpi: number) => void
   setMarginUnit: (unit: 'mm' | 'inches') => void
   setPageDimensions: (dimensions: {[key: string]: {width: number, height: number}}) => void
 }
@@ -49,6 +51,7 @@ export const useAppStore = create<AppState>((set) => ({
   marginBottom: 0,
   rotation: 0,
   outlineColor: 'red',
+  dpi: 300,
   marginUnit: 'mm',
   pageDimensions: {},
 
@@ -66,6 +69,7 @@ export const useAppStore = create<AppState>((set) => ({
   setMarginBottom: (marginBottom) => set({ marginBottom }),
   setRotation: (rotation) => set({ rotation }),
   setOutlineColor: (outlineColor) => set({ outlineColor }),
+  setDpi: (dpi) => set({ dpi }),
   setMarginUnit: (marginUnit) => set({ marginUnit }),
   setPageDimensions: (pageDimensions) => set({ pageDimensions }),
 }))
