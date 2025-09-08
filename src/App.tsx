@@ -157,15 +157,15 @@ function App() {
       const sheetOffset = Math.floor((pageOffset || 0) / 2) * cardsPerPage
       
       if (isBackPage) {
-        // Back pages: reverse the numbering with 'b' suffix within each row
-        // First row: 4b, 3b, 2b, 1b
-        // Second row: 8b, 7b, 6b, 5b
+        // Back pages: reverse the numbering with (Back) suffix within each row
+        // First row: 4 (Back), 3 (Back), 2 (Back), 1 (Back)
+        // Second row: 8 (Back), 7 (Back), 6 (Back), 5 (Back)
         const baseNumber = row * columns + (columns - col) + sheetOffset
-        return `${baseNumber}b`
+        return `${baseNumber} (Back)`
       } else {
-        // Front pages: normal numbering with 'a' suffix
+        // Front pages: normal numbering with (Front) suffix
         const cardNumber = row * columns + col + 1 + sheetOffset
-        return `${cardNumber}a`
+        return `${cardNumber} (Front)`
       }
     }
 
