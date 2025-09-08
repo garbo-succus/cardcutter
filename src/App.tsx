@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -19,6 +19,8 @@ function App() {
   const [marginTop, setMarginTop] = useState<number>(0)
   const [marginBottom, setMarginBottom] = useState<number>(0)
   const [rotation, setRotation] = useState<number>(0)
+  const [outlineColor, setOutlineColor] = useState<string>('red')
+  const [pageDimensions, setPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
 
   const onFile1Change = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0]
@@ -42,8 +44,69 @@ function App() {
     setNumPages2(numPages)
   }
 
+  const GridOverlay = ({ pageWidth, pageHeight }: { pageWidth: number, pageHeight: number }) => {
+    // Convert mm to pixels assuming 72 DPI (standard PDF DPI)
+    // 1 inch = 25.4 mm, 1 inch = 72 pixels, so 1 mm = 72/25.4 ≈ 2.83 pixels
+    const mmToPixels = (mm: number) => mm * (72 / 25.4)
+    
+    const marginLeftPx = mmToPixels(marginLeft)
+    const marginRightPx = mmToPixels(marginRight)
+    const marginTopPx = mmToPixels(marginTop)
+    const marginBottomPx = mmToPixels(marginBottom)
+    
+    const availableWidth = pageWidth - marginLeftPx - marginRightPx
+    const availableHeight = pageHeight - marginTopPx - marginBottomPx
+    const cellWidth = availableWidth / columns
+    const cellHeight = availableHeight / rows
+
+    const gridBoxes = []
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < columns; col++) {
+        const x = marginLeftPx + col * cellWidth
+        const y = marginTopPx + row * cellHeight
+        gridBoxes.push(
+          <div
+            key={`${row}-${col}`}
+            style={{
+              position: 'absolute',
+              left: x,
+              top: y,
+              width: cellWidth,
+              height: cellHeight,
+              border: `1px solid ${outlineColor === 'red' ? 'rgba(255, 0, 0, 0.75)' : 
+                       outlineColor === 'blue' ? 'rgba(0, 0, 255, 0.75)' :
+                       outlineColor === 'green' ? 'rgba(0, 128, 0, 0.75)' :
+                       outlineColor === 'white' ? 'rgba(255, 255, 255, 0.75)' :
+                       'rgba(0, 0, 0, 0.75)'}`,
+              boxSizing: 'border-box',
+              pointerEvents: 'none'
+            }}
+          />
+        )
+      }
+    }
+
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: pageWidth,
+          height: pageHeight,
+          pointerEvents: 'none'
+        }}
+      >
+        {gridBoxes}
+      </div>
+    )
+  }
+
   return (
     <div>
+      <h1>Cardcutter</h1>
+      <p>Turn PDF card sheets into individual cards for Probability</p>
+      
       <div style={{ marginBottom: '1em' }}>
         <label>
           <input
@@ -85,39 +148,43 @@ function App() {
           />
         </label>
         <label>
-          Margin Left:
+          Margin Left (mm):
           <input
             type="number"
             value={marginLeft}
             onChange={(e) => setMarginLeft(Number(e.target.value))}
             style={{ marginLeft: '0.5em', width: '60px' }}
+            step="0.1"
           />
         </label>
         <label>
-          Margin Right:
+          Margin Right (mm):
           <input
             type="number"
             value={marginRight}
             onChange={(e) => setMarginRight(Number(e.target.value))}
             style={{ marginLeft: '0.5em', width: '60px' }}
+            step="0.1"
           />
         </label>
         <label>
-          Margin Top:
+          Margin Top (mm):
           <input
             type="number"
             value={marginTop}
             onChange={(e) => setMarginTop(Number(e.target.value))}
             style={{ marginLeft: '0.5em', width: '60px' }}
+            step="0.1"
           />
         </label>
         <label>
-          Margin Bottom:
+          Margin Bottom (mm):
           <input
             type="number"
             value={marginBottom}
             onChange={(e) => setMarginBottom(Number(e.target.value))}
             style={{ marginLeft: '0.5em', width: '60px' }}
+            step="0.1"
           />
         </label>
         <label>
@@ -131,6 +198,20 @@ function App() {
             <option value={90}>90°</option>
             <option value={180}>180°</option>
             <option value={270}>270°</option>
+          </select>
+        </label>
+        <label>
+          Outline Color:
+          <select
+            value={outlineColor}
+            onChange={(e) => setOutlineColor(e.target.value)}
+            style={{ marginLeft: '0.5em' }}
+          >
+            <option value="red">Red</option>
+            <option value="blue">Blue</option>
+            <option value="green">Green</option>
+            <option value="white">White</option>
+            <option value="black">Black</option>
           </select>
         </label>
       </div>
@@ -149,11 +230,44 @@ function App() {
               file={file1} 
               onLoadSuccess={onDocument1LoadSuccess}
             >
-              {Array.from(new Array(numPages1), (el, index) => (
-                <div key={`page1_${index + 1}`} style={{ margin: '0 0 1em 0', padding: 0, display: 'block' }}>
-                  <Page pageNumber={index + 1} />
-                </div>
-              ))}
+              {Array.from(new Array(numPages1), (el, index) => {
+                const pageKey = `page1_${index + 1}`
+                const dimensions = pageDimensions[pageKey]
+                return (
+                  <div key={pageKey} style={{ margin: '0 0 1em 0', padding: 0, display: 'inline-block', position: 'relative' }}>
+                    <Page 
+                      pageNumber={index + 1}
+                      onRenderSuccess={() => {
+                        setTimeout(() => {
+                          const pageElement = document.querySelector(`[data-page-number="${index + 1}"]`) as HTMLElement
+                          if (pageElement) {
+                            const canvas = pageElement.querySelector('canvas')
+                            if (canvas) {
+                              setPageDimensions(prev => ({
+                                ...prev,
+                                [pageKey]: { width: canvas.clientWidth, height: canvas.clientHeight }
+                              }))
+                            }
+                          }
+                        }, 100)
+                      }}
+                    />
+                    {dimensions && (
+                      <div 
+                        className="grid-overlay-container"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          pointerEvents: 'none'
+                        }}
+                      >
+                        <GridOverlay pageWidth={dimensions.width} pageHeight={dimensions.height} />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </Document>
           )}
         </div>
@@ -172,11 +286,44 @@ function App() {
                 file={file2} 
                 onLoadSuccess={onDocument2LoadSuccess}
               >
-                {Array.from(new Array(numPages2), (el, index) => (
-                  <div key={`page2_${index + 1}`} style={{ margin: '0 0 1em 0', padding: 0, display: 'block' }}>
-                    <Page pageNumber={index + 1} />
-                  </div>
-                ))}
+                {Array.from(new Array(numPages2), (el, index) => {
+                  const pageKey = `page2_${index + 1}`
+                  const dimensions = pageDimensions[pageKey]
+                  return (
+                    <div key={pageKey} style={{ margin: '0 0 1em 0', padding: 0, display: 'inline-block', position: 'relative' }}>
+                      <Page 
+                        pageNumber={index + 1}
+                        onRenderSuccess={() => {
+                          setTimeout(() => {
+                            const pageElement = document.querySelector(`[data-page-number="${index + 1}"]`) as HTMLElement
+                            if (pageElement) {
+                              const canvas = pageElement.querySelector('canvas')
+                              if (canvas) {
+                                setPageDimensions(prev => ({
+                                  ...prev,
+                                  [pageKey]: { width: canvas.clientWidth, height: canvas.clientHeight }
+                                }))
+                              }
+                            }
+                          }, 100)
+                        }}
+                      />
+                      {dimensions && (
+                        <div 
+                          className="grid-overlay-container"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            pointerEvents: 'none'
+                          }}
+                        >
+                          <GridOverlay pageWidth={dimensions.width} pageHeight={dimensions.height} />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </Document>
             )}
           </div>
