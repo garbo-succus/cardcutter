@@ -303,86 +303,104 @@ function App() {
             style={{ marginLeft: '0.5em', width: '60px' }}
           />
         </label>
-        <label>
-          Margin Left (mm):
-          <input
-            type="number"
-            value={marginLeft}
-            onChange={(e) => update('marginLeft', Number(e.target.value))}
-            style={{ marginLeft: '0.5em', width: '60px' }}
-            step="0.1"
-            min="0"
-          />
-          (inches)
-          <input
-            type="number"
-            value={Math.round((marginLeft / 25.4) * 100) / 100}
-            onChange={(e) => update('marginLeft', Number(e.target.value) * 25.4)}
-            style={{ marginLeft: '0.25em', width: '60px' }}
-            step="0.01"
-            min="0"
-          />
-        </label>
-        <label>
-          Margin Right (mm):
-          <input
-            type="number"
-            value={marginRight}
-            onChange={(e) => update('marginRight', Number(e.target.value))}
-            style={{ marginLeft: '0.5em', width: '60px' }}
-            step="0.1"
-            min="0"
-          />
-          (inches)
-          <input
-            type="number"
-            value={Math.round((marginRight / 25.4) * 100) / 100}
-            onChange={(e) => update('marginRight', Number(e.target.value) * 25.4)}
-            style={{ marginLeft: '0.25em', width: '60px' }}
-            step="0.01"
-            min="0"
-          />
-        </label>
-        <label>
-          Margin Top (mm):
-          <input
-            type="number"
-            value={marginTop}
-            onChange={(e) => update('marginTop', Number(e.target.value))}
-            style={{ marginLeft: '0.5em', width: '60px' }}
-            step="0.1"
-            min="0"
-          />
-          (inches)
-          <input
-            type="number"
-            value={Math.round((marginTop / 25.4) * 100) / 100}
-            onChange={(e) => update('marginTop', Number(e.target.value) * 25.4)}
-            style={{ marginLeft: '0.25em', width: '60px' }}
-            step="0.01"
-            min="0"
-          />
-        </label>
-        <label>
-          Margin Bottom (mm):
-          <input
-            type="number"
-            value={marginBottom}
-            onChange={(e) => update('marginBottom', Number(e.target.value))}
-            style={{ marginLeft: '0.5em', width: '60px' }}
-            step="0.1"
-            min="0"
-          />
-          (inches)
-          <input
-            type="number"
-            value={Math.round((marginBottom / 25.4) * 100) / 100}
-            onChange={(e) => update('marginBottom', Number(e.target.value) * 25.4)}
-            style={{ marginLeft: '0.25em', width: '60px' }}
-            step="0.01"
-            min="0"
-          />
-        </label>
+
+        <div style={{ marginBottom: '1em', border: '1px solid #ccc', padding: '1em', borderRadius: '4px' }}>
+          <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>Page Margins</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '60px' }}>
+                Left:
+              </label>
+              <input
+                type="number"
+                value={marginLeft}
+                onChange={(e) => update('marginLeft', Number(e.target.value))}
+                style={{ width: '60px', marginRight: '4px' }}
+                step="0.1"
+                min="0"
+              />
+              <span style={{ marginRight: '8px' }}>mm</span>
+              <input
+                type="number"
+                value={Math.round((marginLeft / 25.4) * 100) / 100}
+                onChange={(e) => update('marginLeft', Number(e.target.value) * 25.4)}
+                style={{ width: '60px', marginRight: '4px' }}
+                step="0.01"
+                min="0"
+              />
+              <span>in</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '60px' }}>
+                Right:
+              </label>
+              <input
+                type="number"
+                value={marginRight}
+                onChange={(e) => update('marginRight', Number(e.target.value))}
+                style={{ width: '60px', marginRight: '4px' }}
+                step="0.1"
+                min="0"
+              />
+              <span style={{ marginRight: '8px' }}>mm</span>
+              <input
+                type="number"
+                value={Math.round((marginRight / 25.4) * 100) / 100}
+                onChange={(e) => update('marginRight', Number(e.target.value) * 25.4)}
+                style={{ width: '60px', marginRight: '4px' }}
+                step="0.01"
+                min="0"
+              />
+              <span>in</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '60px' }}>
+                Top:
+              </label>
+              <input
+                type="number"
+                value={marginTop}
+                onChange={(e) => update('marginTop', Number(e.target.value))}
+                style={{ width: '60px', marginRight: '4px' }}
+                step="0.1"
+                min="0"
+              />
+              <span style={{ marginRight: '8px' }}>mm</span>
+              <input
+                type="number"
+                value={Math.round((marginTop / 25.4) * 100) / 100}
+                onChange={(e) => update('marginTop', Number(e.target.value) * 25.4)}
+                style={{ width: '60px', marginRight: '4px' }}
+                step="0.01"
+                min="0"
+              />
+              <span>in</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '60px' }}>
+                Bottom:
+              </label>
+              <input
+                type="number"
+                value={marginBottom}
+                onChange={(e) => update('marginBottom', Number(e.target.value))}
+                style={{ width: '60px', marginRight: '4px' }}
+                step="0.1"
+                min="0"
+              />
+              <span style={{ marginRight: '8px' }}>mm</span>
+              <input
+                type="number"
+                value={Math.round((marginBottom / 25.4) * 100) / 100}
+                onChange={(e) => update('marginBottom', Number(e.target.value) * 25.4)}
+                style={{ width: '60px', marginRight: '4px' }}
+                step="0.01"
+                min="0"
+              />
+              <span>in</span>
+            </div>
+          </div>
+        </div>
         <label>
           Column Spacing (mm):
           <input
