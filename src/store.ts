@@ -8,6 +8,8 @@ interface AppState {
   numPages2: number
   columns: number
   rows: number
+  startPage: number
+  finishPage: number | null
   marginLeft: number
   marginRight: number
   marginTop: number
@@ -26,6 +28,8 @@ interface AppState {
   setNumPages2: (numPages: number) => void
   setColumns: (columns: number) => void
   setRows: (rows: number) => void
+  setStartPage: (page: number) => void
+  setFinishPage: (page: number | null) => void
   setMarginLeft: (margin: number) => void
   setMarginRight: (margin: number) => void
   setMarginTop: (margin: number) => void
@@ -45,6 +49,8 @@ export const useAppStore = create<AppState>((set) => ({
   numPages2: 0,
   columns: 4,
   rows: 2,
+  startPage: 1,
+  finishPage: null,
   marginLeft: 0,
   marginRight: 0,
   marginTop: 0,
@@ -63,6 +69,8 @@ export const useAppStore = create<AppState>((set) => ({
   setNumPages2: (numPages2) => set({ numPages2 }),
   setColumns: (columns) => set({ columns }),
   setRows: (rows) => set({ rows }),
+  setStartPage: (startPage) => set({ startPage }),
+  setFinishPage: (finishPage) => set({ finishPage }),
   setMarginLeft: (marginLeft) => set({ marginLeft }),
   setMarginRight: (marginRight) => set({ marginRight }),
   setMarginTop: (marginTop) => set({ marginTop }),

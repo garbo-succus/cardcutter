@@ -87,14 +87,16 @@ function CardSize({ columns, rows, marginLeft, marginRight, marginTop, marginBot
 }
 
 function App() {
-  const [mode, setMode] = useState<'single' | 'separate'>('single')
+  const mode = useAppStore((state) => state.mode)
   const [file1, setFile1] = useState<File | null>(null)
   const [numPages1, setNumPages1] = useState<number>(0)
   const [file2, setFile2] = useState<File | null>(null)
   const [numPages2, setNumPages2] = useState<number>(0)
   
-  const [columns, setColumns] = useState<number>(4)
-  const [rows, setRows] = useState<number>(2)
+  const columns = useAppStore((state) => state.columns)
+  const rows = useAppStore((state) => state.rows)
+  const startPage = useAppStore((state) => state.startPage)
+  const finishPage = useAppStore((state) => state.finishPage)
   const marginLeft = useAppStore((state) => state.marginLeft)
   const marginRight = useAppStore((state) => state.marginRight)
   const marginTop = useAppStore((state) => state.marginTop)
@@ -105,8 +107,6 @@ function App() {
   const update = useAppStore((state) => state.update)
   const [columnSpacing, setColumnSpacing] = useState<number>(0)
   const [rowSpacing, setRowSpacing] = useState<number>(0)
-  const [startPage, setStartPage] = useState<number>(1)
-  const [finishPage, setFinishPage] = useState<number | null>(null)
   const [pageDimensions, setPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
 
   const onFile1Change = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -239,7 +239,7 @@ function App() {
             type="radio"
             value="single"
             checked={mode === 'single'}
-            onChange={(e) => setMode('single')}
+            onChange={(e) => update('mode', 'single')}
           />
           Front and back on 1 pdf
         </label>
@@ -248,7 +248,7 @@ function App() {
             type="radio"
             value="separate"
             checked={mode === 'separate'}
-            onChange={(e) => setMode('separate')}
+            onChange={(e) => update('mode', 'separate')}
           />
           Front and back on separate PDFs
         </label>
@@ -262,7 +262,7 @@ function App() {
               <input
                 type="number"
                 value={startPage}
-                onChange={(e) => setStartPage(Math.max(1, Math.min(Number(e.target.value), Math.max(numPages1, numPages2))))}
+                onChange={(e) => update('startPage', Math.max(1, Math.min(Number(e.target.value), Math.max(numPages1, numPages2))))}
                 style={{ marginLeft: '0.5em', width: '60px' }}
                 min="1"
                 max={Math.max(numPages1, numPages2)}
@@ -276,7 +276,7 @@ function App() {
                 onChange={(e) => {
                   const maxPages = Math.max(numPages1, numPages2)
                   const value = Number(e.target.value)
-                  setFinishPage(value === maxPages ? null : Math.max(startPage, Math.min(value, maxPages)))
+                  update('finishPage', value === maxPages ? null : Math.max(startPage, Math.min(value, maxPages)))
                 }}
                 style={{ marginLeft: '0.5em', width: '60px' }}
                 min={startPage}
@@ -290,7 +290,7 @@ function App() {
           <input
             type="number"
             value={columns}
-            onChange={(e) => setColumns(Number(e.target.value))}
+            onChange={(e) => update('columns', Number(e.target.value))}
             style={{ marginLeft: '0.5em', width: '60px' }}
           />
         </label>
@@ -299,7 +299,7 @@ function App() {
           <input
             type="number"
             value={rows}
-            onChange={(e) => setRows(Number(e.target.value))}
+            onChange={(e) => update('rows', Number(e.target.value))}
             style={{ marginLeft: '0.5em', width: '60px' }}
           />
         </label>
