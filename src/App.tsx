@@ -967,7 +967,7 @@ function App() {
       <p>Turn PDF card sheets into individual cards for <a href="https://probability.nz" target="_blank" rel="noopener noreferrer">Probability</a></p>
       
       <div style={{ display: 'flex', gap: '1em', marginBottom: '1em', flexWrap: 'wrap' }}>
-        <div style={{ border: '1px solid #ccc', padding: '1em', borderRadius: '4px', flex: '1', minWidth: '300px' }}>
+        <div style={{ border: '1px solid #ccc', padding: '1em', borderRadius: '4px', flex: '1', minWidth: '300px', backgroundColor: '#e8f5e8' }}>
           <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>PDF Setup</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
             <div>
