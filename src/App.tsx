@@ -6,6 +6,7 @@ import { useAppStore } from './store'
 import { zip } from 'fflate'
 import packageTemplate from './assets/package-template.json'
 import { generateProbabilityJson } from './assets/probability-template'
+import GitHubBanner from './GitHubBanner'
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -959,7 +960,10 @@ function App() {
 
   return (
     <div>
-      <h1>Cardcutter</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1em', marginBottom: '0.5em' }}>
+        <h1 style={{ margin: 0 }}>Cardcutter</h1>
+        <GitHubBanner repoUrl="https://github.com/garbo-succus/cardcutter" />
+      </div>
       <p>Turn PDF card sheets into individual cards for <a href="https://probability.nz" target="_blank" rel="noopener noreferrer">Probability</a></p>
       
       <div style={{ display: 'flex', gap: '1em', marginBottom: '1em', flexWrap: 'wrap' }}>
