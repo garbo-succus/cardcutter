@@ -14,6 +14,8 @@ interface AppState {
   marginRight: number
   marginTop: number
   marginBottom: number
+  columnSpacing: number
+  rowSpacing: number
   rotation: number
   outlineColor: string
   dpi: number
@@ -34,6 +36,8 @@ interface AppState {
   setMarginRight: (margin: number) => void
   setMarginTop: (margin: number) => void
   setMarginBottom: (margin: number) => void
+  setColumnSpacing: (spacing: number) => void
+  setRowSpacing: (spacing: number) => void
   setRotation: (rotation: number) => void
   setOutlineColor: (color: string) => void
   setDpi: (dpi: number) => void
@@ -55,6 +59,8 @@ export const useAppStore = create<AppState>((set) => ({
   marginRight: 0,
   marginTop: 0,
   marginBottom: 0,
+  columnSpacing: 0,
+  rowSpacing: 0,
   rotation: 0,
   outlineColor: 'red',
   dpi: 300,
@@ -75,6 +81,8 @@ export const useAppStore = create<AppState>((set) => ({
   setMarginRight: (marginRight) => set({ marginRight }),
   setMarginTop: (marginTop) => set({ marginTop }),
   setMarginBottom: (marginBottom) => set({ marginBottom }),
+  setColumnSpacing: (columnSpacing) => set({ columnSpacing }),
+  setRowSpacing: (rowSpacing) => set({ rowSpacing }),
   setRotation: (rotation) => set({ rotation }),
   setOutlineColor: (outlineColor) => set({ outlineColor }),
   setDpi: (dpi) => set({ dpi }),

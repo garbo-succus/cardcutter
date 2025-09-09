@@ -101,12 +101,12 @@ function App() {
   const marginRight = useAppStore((state) => state.marginRight)
   const marginTop = useAppStore((state) => state.marginTop)
   const marginBottom = useAppStore((state) => state.marginBottom)
+  const columnSpacing = useAppStore((state) => state.columnSpacing)
+  const rowSpacing = useAppStore((state) => state.rowSpacing)
   const rotation = useAppStore((state) => state.rotation)
   const outlineColor = useAppStore((state) => state.outlineColor)
   const dpi = useAppStore((state) => state.dpi)
   const update = useAppStore((state) => state.update)
-  const [columnSpacing, setColumnSpacing] = useState<number>(0)
-  const [rowSpacing, setRowSpacing] = useState<number>(0)
   const [pageDimensions, setPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
 
   const onFile1Change = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -389,7 +389,7 @@ function App() {
               <input
                 type="number"
                 value={columnSpacing}
-                onChange={(e) => setColumnSpacing(Number(e.target.value))}
+                onChange={(e) => update('columnSpacing', Number(e.target.value))}
                 style={{ width: '60px', marginRight: '4px' }}
                 step="0.1"
                 min="0"
@@ -398,7 +398,7 @@ function App() {
               <input
                 type="number"
                 value={Math.round((columnSpacing / 25.4) * 100) / 100}
-                onChange={(e) => setColumnSpacing(Number(e.target.value) * 25.4)}
+                onChange={(e) => update('columnSpacing', Number(e.target.value) * 25.4)}
                 style={{ width: '60px', marginRight: '4px' }}
                 step="0.01"
                 min="0"
@@ -412,7 +412,7 @@ function App() {
               <input
                 type="number"
                 value={rowSpacing}
-                onChange={(e) => setRowSpacing(Number(e.target.value))}
+                onChange={(e) => update('rowSpacing', Number(e.target.value))}
                 style={{ width: '60px', marginRight: '4px' }}
                 step="0.1"
                 min="0"
@@ -421,7 +421,7 @@ function App() {
               <input
                 type="number"
                 value={Math.round((rowSpacing / 25.4) * 100) / 100}
-                onChange={(e) => setRowSpacing(Number(e.target.value) * 25.4)}
+                onChange={(e) => update('rowSpacing', Number(e.target.value) * 25.4)}
                 style={{ width: '60px', marginRight: '4px' }}
                 step="0.01"
                 min="0"
