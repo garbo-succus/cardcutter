@@ -106,6 +106,7 @@ function App() {
   const rotation = useAppStore((state) => state.rotation)
   const outlineColor = useAppStore((state) => state.outlineColor)
   const dpi = useAppStore((state) => state.dpi)
+  const templateName = useAppStore((state) => state.templateName)
   const update = useAppStore((state) => state.update)
   const [pageDimensions, setPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
 
@@ -556,6 +557,18 @@ function App() {
                 style={{ width: '60px' }}
                 min="72"
                 step="1"
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '100px' }}>
+                Template name:
+              </label>
+              <input
+                type="text"
+                value={templateName}
+                onChange={(e) => update('templateName', e.target.value)}
+                placeholder="card"
+                style={{ width: '120px' }}
               />
             </div>
             <div>

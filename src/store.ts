@@ -19,6 +19,7 @@ interface AppState {
   rotation: number
   outlineColor: string
   dpi: number
+  templateName: string
   marginUnit: 'mm' | 'inches'
   pageDimensions: {[key: string]: {width: number, height: number}}
 
@@ -41,6 +42,7 @@ interface AppState {
   setRotation: (rotation: number) => void
   setOutlineColor: (color: string) => void
   setDpi: (dpi: number) => void
+  setTemplateName: (name: string) => void
   setMarginUnit: (unit: 'mm' | 'inches') => void
   setPageDimensions: (dimensions: {[key: string]: {width: number, height: number}}) => void
 }
@@ -64,6 +66,7 @@ export const useAppStore = create<AppState>((set) => ({
   rotation: 0,
   outlineColor: 'red',
   dpi: 300,
+  templateName: 'card',
   marginUnit: 'mm',
   pageDimensions: {},
 
@@ -86,6 +89,7 @@ export const useAppStore = create<AppState>((set) => ({
   setRotation: (rotation) => set({ rotation }),
   setOutlineColor: (outlineColor) => set({ outlineColor }),
   setDpi: (dpi) => set({ dpi }),
+  setTemplateName: (templateName) => set({ templateName }),
   setMarginUnit: (marginUnit) => set({ marginUnit }),
   setPageDimensions: (pageDimensions) => set({ pageDimensions }),
 }))
