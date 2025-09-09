@@ -701,56 +701,77 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
     const exportedFiles: Array<{ filename: string, blob: Blob }> = []
     
     try {
-      for (let cardIndex = 0; cardIndex < totalCards; cardIndex++) {
-        const cardNumber = cardIndex + startingCardNumber
-        const cardsPerPage = columns * rows
-        const sheetIndex = Math.floor(cardIndex / cardsPerPage)
+      // Process cards in batches by page for maximum cache efficiency
+      const cardsPerPage = columns * rows
+      let completedCards = 0
+      
+      // Process each page/sheet of cards in parallel
+      for (let cardIndex = 0; cardIndex < totalCards; cardIndex += cardsPerPage) {
+        const pageCardCount = Math.min(cardsPerPage, totalCards - cardIndex)
+        const pagePromises: Promise<{ filename: string, blob: Blob } | null>[] = []
         
-        // Generate front card
-        let frontPdfPageNumber: number
-        let frontTargetFile: File | null
-        let frontPageKey: string
-        
-        if (mode === 'single') {
-          frontPdfPageNumber = startPage + sheetIndex * 2
-          frontTargetFile = file1
-          frontPageKey = `page1_${frontPdfPageNumber}`
-        } else {
-          frontPdfPageNumber = startPage + sheetIndex
-          frontTargetFile = file1
-          frontPageKey = `page1_${frontPdfPageNumber}`
-        }
-        
-        if (frontTargetFile) {
-          const frontCard = await generateCardImage(cardIndex + 1, false, frontTargetFile, frontPdfPageNumber, frontPageKey)
-          if (frontCard) {
-            exportedFiles.push(frontCard)
+        // Generate all cards for this page in parallel
+        for (let pageCardIndex = 0; pageCardIndex < pageCardCount; pageCardIndex++) {
+          const currentCardIndex = cardIndex + pageCardIndex
+          const cardNumber = currentCardIndex + startingCardNumber
+          const sheetIndex = Math.floor(currentCardIndex / cardsPerPage)
+          
+          // Generate front card
+          let frontPdfPageNumber: number
+          let frontTargetFile: File | null
+          let frontPageKey: string
+          
+          if (mode === 'single') {
+            frontPdfPageNumber = startPage + sheetIndex * 2
+            frontTargetFile = file1
+            frontPageKey = `page1_${frontPdfPageNumber}`
+          } else {
+            frontPdfPageNumber = startPage + sheetIndex
+            frontTargetFile = file1
+            frontPageKey = `page1_${frontPdfPageNumber}`
+          }
+          
+          if (frontTargetFile) {
+            pagePromises.push(
+              generateCardImage(currentCardIndex + 1, false, frontTargetFile, frontPdfPageNumber, frontPageKey)
+            )
+          }
+          
+          // Generate back card
+          let backPdfPageNumber: number
+          let backTargetFile: File | null
+          let backPageKey: string
+          
+          if (mode === 'single') {
+            backPdfPageNumber = startPage + sheetIndex * 2 + 1
+            backTargetFile = file1
+            backPageKey = `page1_${backPdfPageNumber}`
+          } else {
+            backPdfPageNumber = startPage + sheetIndex
+            backTargetFile = file2
+            backPageKey = `page2_${backPdfPageNumber}`
+          }
+          
+          if (backTargetFile) {
+            pagePromises.push(
+              generateCardImage(currentCardIndex + 1, true, backTargetFile, backPdfPageNumber, backPageKey)
+            )
           }
         }
         
-        // Generate back card
-        let backPdfPageNumber: number
-        let backTargetFile: File | null
-        let backPageKey: string
+        // Wait for all cards from this page to complete
+        const pageResults = await Promise.all(pagePromises)
         
-        if (mode === 'single') {
-          backPdfPageNumber = startPage + sheetIndex * 2 + 1
-          backTargetFile = file1
-          backPageKey = `page1_${backPdfPageNumber}`
-        } else {
-          backPdfPageNumber = startPage + sheetIndex
-          backTargetFile = file2
-          backPageKey = `page2_${backPdfPageNumber}`
-        }
-        
-        if (backTargetFile) {
-          const backCard = await generateCardImage(cardIndex + 1, true, backTargetFile, backPdfPageNumber, backPageKey)
-          if (backCard) {
-            exportedFiles.push(backCard)
+        // Add successful results to exported files
+        pageResults.forEach(result => {
+          if (result) {
+            exportedFiles.push(result)
           }
-        }
+        })
         
-        setExportProgress(prev => ({ ...prev, completed: cardIndex + 1 }))
+        // Update progress after each page
+        completedCards += pageCardCount
+        setExportProgress(prev => ({ ...prev, completed: completedCards }))
       }
       
       console.log('Exported files:', exportedFiles.map(f => f.filename))
