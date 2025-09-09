@@ -1,33 +1,19 @@
 // Test AVIF export support once at module load
 export const CANVAS_EXPORT_SUPPORT_AVIF = (() => {
   if (typeof window === 'undefined') return false
-  
   const canvas = document.createElement('canvas')
   canvas.width = 1
   canvas.height = 1
-  
-  let avifSupported = false
-  canvas.toBlob((blob) => {
-    avifSupported = blob?.type === 'image/avif'
-  }, 'image/avif')
-  
-  return avifSupported
+  return canvas.toDataURL('image/avif').startsWith('data:image/avif')
 })()
 
 // Test WebP export support once at module load
 export const CANVAS_EXPORT_SUPPORT_WEBP = (() => {
   if (typeof window === 'undefined') return false
-  
   const canvas = document.createElement('canvas')
   canvas.width = 1
   canvas.height = 1
-  
-  let webpSupported = false
-  canvas.toBlob((blob) => {
-    webpSupported = blob?.type === 'image/webp'
-  }, 'image/webp')
-  
-  return webpSupported
+  return canvas.toDataURL('image/webp').startsWith('data:image/webp')
 })()
 
 // Determine best default format based on support

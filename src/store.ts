@@ -26,6 +26,7 @@ interface AppState {
   startingCardNumber: number
   cardThickness: number
   imageFormat: string
+  imageQuality: number
 
   update: <K extends keyof Omit<AppState, 'update'>>(key: K, value: AppState[K]) => void
   setMode: (mode: 'single' | 'separate') => void
@@ -52,6 +53,7 @@ interface AppState {
   setStartingCardNumber: (startingNumber: number) => void
   setCardThickness: (thickness: number) => void
   setImageFormat: (format: string) => void
+  setImageQuality: (quality: number) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -79,6 +81,7 @@ export const useAppStore = create<AppState>((set) => ({
   startingCardNumber: 1,
   cardThickness: 0.0003,
   imageFormat: getDefaultImageFormat(),
+  imageQuality: 0.8,
 
   update: (key, value) => set({ [key]: value } as any),
   setMode: (mode) => set({ mode }),
@@ -105,4 +108,5 @@ export const useAppStore = create<AppState>((set) => ({
   setStartingCardNumber: (startingCardNumber) => set({ startingCardNumber }),
   setCardThickness: (cardThickness) => set({ cardThickness }),
   setImageFormat: (imageFormat) => set({ imageFormat }),
+  setImageQuality: (imageQuality) => set({ imageQuality }),
 }))

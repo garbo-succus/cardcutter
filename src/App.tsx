@@ -489,11 +489,12 @@ interface CardExportProps {
   startingCardNumber: number
   cardThickness: number
   imageFormat: string
+  imageQuality: number
   isExporting: boolean
   setIsExporting: (exporting: boolean) => void
 }
 
-function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, numPages1, numPages2, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions, startingCardNumber, cardThickness, imageFormat, isExporting, setIsExporting }: CardExportProps) {
+function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, numPages1, numPages2, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions, startingCardNumber, cardThickness, imageFormat, imageQuality, isExporting, setIsExporting }: CardExportProps) {
   const [exportProgress, setExportProgress] = useState({ completed: 0, total: 0 })
   const pageRenderCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map())
 
@@ -635,7 +636,7 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
           } else {
             resolve(null)
           }
-        }, imageFormat === 'jpeg' ? 'image/jpeg' : `image/${imageFormat}`, imageFormat === 'jpeg' ? 0.8 : undefined)
+        }, `image/${imageFormat}`, imageQuality)
       }
     })
   }, [columns, rows, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions, renderPageToCache])
@@ -877,6 +878,7 @@ function App() {
   const startingCardNumber = useAppStore((state) => state.startingCardNumber)
   const cardThickness = useAppStore((state) => state.cardThickness)
   const imageFormat = useAppStore((state) => state.imageFormat)
+  const imageQuality = useAppStore((state) => state.imageQuality)
   const update = useAppStore((state) => state.update)
   const [renderedPageDimensions, setRenderedPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
   const [isExporting, setIsExporting] = useState(false)
@@ -1443,6 +1445,7 @@ function App() {
           startingCardNumber={startingCardNumber}
           cardThickness={cardThickness}
           imageFormat={imageFormat}
+          imageQuality={imageQuality}
           isExporting={isExporting}
           setIsExporting={setIsExporting}
         />
