@@ -782,7 +782,6 @@ function App() {
   const marginBottom = useAppStore((state) => state.marginBottom)
   const columnSpacing = useAppStore((state) => state.columnSpacing)
   const rowSpacing = useAppStore((state) => state.rowSpacing)
-  const rotation = useAppStore((state) => state.rotation)
   const outlineColor = useAppStore((state) => state.outlineColor)
   const dpi = useAppStore((state) => state.dpi)
   const templateName = useAppStore((state) => state.templateName)
@@ -1056,22 +1055,6 @@ function App() {
                 max={Math.max(numPages1, numPages2) || 1}
                 disabled
               />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '100px' }}>
-                Rotation:
-              </label>
-              <select
-                disabled
-                value={rotation}
-                onChange={(e) => update('rotation', Number(e.target.value))}
-                style={{ width: '80px' }}
-              >
-                <option value={0}>0°</option>
-                <option value={90}>90°</option>
-                <option value={180}>180°</option>
-                <option value={270}>270°</option>
-              </select>
             </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <label style={{ display: 'inline-block', width: '100px' }}>

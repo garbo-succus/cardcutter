@@ -16,7 +16,6 @@ interface AppState {
   marginBottom: number
   columnSpacing: number
   rowSpacing: number
-  rotation: number
   outlineColor: string
   dpi: number
   templateName: string
@@ -42,7 +41,6 @@ interface AppState {
   setMarginBottom: (margin: number) => void
   setColumnSpacing: (spacing: number) => void
   setRowSpacing: (spacing: number) => void
-  setRotation: (rotation: number) => void
   setOutlineColor: (color: string) => void
   setDpi: (dpi: number) => void
   setTemplateName: (name: string) => void
@@ -69,7 +67,6 @@ export const useAppStore = create<AppState>((set) => ({
   marginBottom: 0,
   columnSpacing: 0,
   rowSpacing: 0,
-  rotation: 0,
   outlineColor: 'red',
   dpi: 300,
   templateName: 'mycard',
@@ -95,7 +92,6 @@ export const useAppStore = create<AppState>((set) => ({
   setMarginBottom: (marginBottom) => set({ marginBottom }),
   setColumnSpacing: (columnSpacing) => set({ columnSpacing }),
   setRowSpacing: (rowSpacing) => set({ rowSpacing }),
-  setRotation: (rotation) => set({ rotation }),
   setOutlineColor: (outlineColor) => set({ outlineColor }),
   setDpi: (dpi) => set({ dpi }),
   setTemplateName: (templateName) => set({ templateName }),
