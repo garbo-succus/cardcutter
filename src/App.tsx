@@ -385,6 +385,260 @@ function CardPreview({ cardNumber, mode, file1, file2, columns, rows, startPage,
   )
 }
 
+interface CardExportProps {
+  mode: 'single' | 'separate'
+  file1: File | null
+  file2: File | null
+  columns: number
+  rows: number
+  startPage: number
+  finishPage: number | null
+  numPages1: number
+  numPages2: number
+  marginLeft: number
+  marginRight: number
+  marginTop: number
+  marginBottom: number
+  columnSpacing: number
+  rowSpacing: number
+  dpi: number
+  templateName: string
+  pageDimensions: {[key: string]: {width: number, height: number}}
+}
+
+function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, numPages1, numPages2, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions }: CardExportProps) {
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportProgress, setExportProgress] = useState({ completed: 0, total: 0 })
+
+  const generateCardImage = useCallback(async (cardNumber: number, isBack: boolean, targetFile: File, pdfPageNumber: number, pageKey: string): Promise<{ filename: string, blob: Blob } | null> => {
+    const dimensions = pageDimensions[pageKey]
+    if (!dimensions || !targetFile) return null
+
+    const cardsPerPage = columns * rows
+    const cardIndex = (cardNumber - 1) % cardsPerPage
+    const row = Math.floor(cardIndex / columns)
+    const col = cardIndex % columns
+
+    const mmToPixels = (mm: number) => mm * (dpi / 25.4)
+    
+    const marginLeftPx = mmToPixels(marginLeft)
+    const marginRightPx = mmToPixels(marginRight)
+    const marginTopPx = mmToPixels(marginTop)
+    const marginBottomPx = mmToPixels(marginBottom)
+    const columnSpacingPx = mmToPixels(columnSpacing)
+    const rowSpacingPx = mmToPixels(rowSpacing)
+    
+    const totalColumnSpacing = columnSpacingPx * (columns - 1)
+    const totalRowSpacing = rowSpacingPx * (rows - 1)
+    
+    const pageWidthPx = dimensions.width * (dpi / 72)
+    const pageHeightPx = dimensions.height * (dpi / 72)
+    
+    const availableWidth = pageWidthPx - marginLeftPx - marginRightPx - totalColumnSpacing
+    const availableHeight = pageHeightPx - marginTopPx - marginBottomPx - totalRowSpacing
+    const cellWidth = availableWidth / columns
+    const cellHeight = availableHeight / rows
+
+    let cardX: number, cardY: number
+    if (isBack) {
+      cardX = marginLeftPx + (columns - col - 1) * (cellWidth + columnSpacingPx)
+    } else {
+      cardX = marginLeftPx + col * (cellWidth + columnSpacingPx)
+    }
+    cardY = marginTopPx + row * (cellHeight + rowSpacingPx)
+
+    return new Promise<{ filename: string, blob: Blob } | null>((resolve) => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        resolve(null)
+        return
+      }
+
+      canvas.width = Math.round(cellWidth)
+      canvas.height = Math.round(cellHeight)
+
+      const tempCanvas = document.createElement('canvas')
+      const tempCtx = tempCanvas.getContext('2d')
+      if (!tempCtx) {
+        resolve(null)
+        return
+      }
+
+      const fileReader = new FileReader()
+      fileReader.onload = function(e) {
+        const typedArray = new Uint8Array(e.target!.result as ArrayBuffer)
+        const loadingTask = pdfjs.getDocument({ data: typedArray })
+        loadingTask.promise.then((pdf) => {
+          pdf.getPage(pdfPageNumber).then((page) => {
+            const scale = dpi / 72
+            const viewport = page.getViewport({ scale })
+
+            tempCanvas.width = viewport.width
+            tempCanvas.height = viewport.height
+
+            const renderContext = {
+              canvasContext: tempCtx,
+              viewport: viewport,
+            }
+
+            page.render(renderContext).promise.then(() => {
+              ctx.drawImage(
+                tempCanvas,
+                cardX, cardY, cellWidth, cellHeight,
+                0, 0, cellWidth, cellHeight
+              )
+
+              canvas.toBlob((blob) => {
+                if (blob) {
+                  const side = isBack ? 'back' : 'front'
+                  const paddedCardNumber = cardNumber.toString().padStart(3, '0')
+                  const filename = `${templateName}-${paddedCardNumber}-${side}.png`
+                  resolve({ filename, blob })
+                } else {
+                  resolve(null)
+                }
+              }, 'image/png')
+            }).catch(() => resolve(null))
+          }).catch(() => resolve(null))
+        }).catch(() => resolve(null))
+      }
+      fileReader.readAsArrayBuffer(targetFile)
+    })
+  }, [columns, rows, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions])
+
+  const exportAllCards = useCallback(async () => {
+    if (!file1 && !file2) return
+
+    setIsExporting(true)
+    
+    const effectiveFinishPage = finishPage || Math.max(numPages1, numPages2)
+    const totalPages = effectiveFinishPage - startPage + 1
+    const cardsPerPage = columns * rows
+    
+    let totalCards: number
+    if (mode === 'single') {
+      totalCards = Math.floor(totalPages / 2) * cardsPerPage
+    } else {
+      totalCards = totalPages * cardsPerPage
+    }
+    
+    setExportProgress({ completed: 0, total: totalCards })
+    
+    const exportedFiles: Array<{ filename: string, blob: Blob }> = []
+    
+    try {
+      for (let cardNumber = 1; cardNumber <= totalCards; cardNumber++) {
+        const cardsPerPage = columns * rows
+        const sheetIndex = Math.floor((cardNumber - 1) / cardsPerPage)
+        
+        // Generate front card
+        let frontPdfPageNumber: number
+        let frontTargetFile: File | null
+        let frontPageKey: string
+        
+        if (mode === 'single') {
+          frontPdfPageNumber = startPage + sheetIndex * 2
+          frontTargetFile = file1
+          frontPageKey = `page1_${frontPdfPageNumber}`
+        } else {
+          frontPdfPageNumber = startPage + sheetIndex
+          frontTargetFile = file1
+          frontPageKey = `page1_${frontPdfPageNumber}`
+        }
+        
+        if (frontTargetFile) {
+          const frontCard = await generateCardImage(cardNumber, false, frontTargetFile, frontPdfPageNumber, frontPageKey)
+          if (frontCard) {
+            exportedFiles.push(frontCard)
+          }
+        }
+        
+        // Generate back card
+        let backPdfPageNumber: number
+        let backTargetFile: File | null
+        let backPageKey: string
+        
+        if (mode === 'single') {
+          backPdfPageNumber = startPage + sheetIndex * 2 + 1
+          backTargetFile = file1
+          backPageKey = `page1_${backPdfPageNumber}`
+        } else {
+          backPdfPageNumber = startPage + sheetIndex
+          backTargetFile = file2
+          backPageKey = `page2_${backPdfPageNumber}`
+        }
+        
+        if (backTargetFile) {
+          const backCard = await generateCardImage(cardNumber, true, backTargetFile, backPdfPageNumber, backPageKey)
+          if (backCard) {
+            exportedFiles.push(backCard)
+          }
+        }
+        
+        setExportProgress(prev => ({ ...prev, completed: cardNumber }))
+      }
+      
+      console.log('Exported files:', exportedFiles.map(f => f.filename))
+      console.log('File objects:', exportedFiles)
+      
+    } catch (error) {
+      console.error('Export failed:', error)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [mode, file1, file2, startPage, finishPage, numPages1, numPages2, columns, rows, generateCardImage])
+
+  if (!file1 && !file2) {
+    return null
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '1em' }}>
+      <button 
+        onClick={exportAllCards}
+        disabled={isExporting}
+        style={{
+          padding: '0.5em 1em',
+          backgroundColor: isExporting ? '#ccc' : '#007bff',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: isExporting ? 'not-allowed' : 'pointer'
+        }}
+      >
+        {isExporting ? 'Exporting...' : 'Export'}
+      </button>
+      
+      {isExporting && (
+        <div style={{ 
+          fontSize: '0.9em', 
+          color: '#666',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5em'
+        }}>
+          <span>{exportProgress.completed}/{exportProgress.total}</span>
+          <div style={{
+            width: '100px',
+            height: '8px',
+            backgroundColor: '#f0f0f0',
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              width: `${(exportProgress.completed / exportProgress.total) * 100}%`,
+              height: '100%',
+              backgroundColor: '#007bff',
+              transition: 'width 0.2s ease'
+            }} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function App() {
   const mode = useAppStore((state) => state.mode)
   const file1 = useAppStore((state) => state.file1)
@@ -910,11 +1164,26 @@ function App() {
                 style={{ width: '120px' }}
               />
             </div>
-            <div>
-              <button onClick={() => {}}>
-                Export
-              </button>
-            </div>
+            <CardExport
+              mode={mode}
+              file1={file1}
+              file2={file2}
+              columns={columns}
+              rows={rows}
+              startPage={startPage}
+              finishPage={finishPage}
+              numPages1={numPages1}
+              numPages2={numPages2}
+              marginLeft={marginLeft}
+              marginRight={marginRight}
+              marginTop={marginTop}
+              marginBottom={marginBottom}
+              columnSpacing={columnSpacing}
+              rowSpacing={rowSpacing}
+              dpi={dpi}
+              templateName={templateName}
+              pageDimensions={pageDimensions}
+            />
           </div>
         </div>
 

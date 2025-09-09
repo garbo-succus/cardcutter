@@ -68,7 +68,7 @@ export const useAppStore = create<AppState>((set) => ({
   rotation: 0,
   outlineColor: 'red',
   dpi: 300,
-  templateName: 'card',
+  templateName: 'mycard',
   marginUnit: 'mm',
   pageDimensions: {},
   previewCardNumber: 1,
