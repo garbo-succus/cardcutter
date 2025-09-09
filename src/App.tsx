@@ -10,6 +10,35 @@ import GitHubBanner from './GitHubBanner'
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
+const convertPngToAvif = async (pngBlob: Blob): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      reject(new Error('Cannot get canvas context'))
+      return
+    }
+
+    const img = new Image()
+    img.onload = () => {
+      canvas.width = img.width
+      canvas.height = img.height
+      ctx.drawImage(img, 0, 0)
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob)
+        } else {
+          reject(new Error('Failed to convert to AVIF'))
+        }
+      }, 'image/avif', 0.8)
+    }
+    
+    img.onerror = () => reject(new Error('Failed to load PNG image'))
+    img.src = URL.createObjectURL(pngBlob)
+  })
+}
+
 interface CardSizeProps {
   columns: number
   rows: number
@@ -458,12 +487,13 @@ interface CardExportProps {
   pageDimensions: {[key: string]: {width: number, height: number}}
   startingCardNumber: number
   cardThickness: number
+  imageFormat: string
+  isExporting: boolean
+  setIsExporting: (exporting: boolean) => void
 }
 
-function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, numPages1, numPages2, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions, startingCardNumber, cardThickness }: CardExportProps) {
-  const [isExporting, setIsExporting] = useState(false)
+function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, numPages1, numPages2, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions, startingCardNumber, cardThickness, imageFormat, isExporting, setIsExporting }: CardExportProps) {
   const [exportProgress, setExportProgress] = useState({ completed: 0, total: 0 })
-  const [imageFormat, setImageFormat] = useState('png')
 
   const generateCardImage = useCallback(async (cardNumber: number, isBack: boolean, targetFile: File, pdfPageNumber: number, pageKey: string): Promise<{ filename: string, blob: Blob } | null> => {
     const dimensions = pageDimensions[pageKey]
@@ -537,24 +567,35 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
               viewport: viewport,
             }
 
-            page.render(renderContext).promise.then(() => {
+            page.render(renderContext).promise.then(async () => {
               ctx.drawImage(
                 tempCanvas,
                 cardX, cardY, cellWidth, cellHeight,
                 0, 0, cellWidth, cellHeight
               )
 
-              canvas.toBlob((blob) => {
-                if (blob) {
+              canvas.toBlob(async (pngBlob) => {
+                if (pngBlob) {
                   const side = isBack ? 'back' : 'front'
                   const actualCardNumber = cardNumber + startingCardNumber - 1
                   const paddedCardNumber = actualCardNumber.toString().padStart(3, '0')
                   const filename = `${templateName}-${paddedCardNumber}-${side}.${imageFormat}`
-                  resolve({ filename, blob })
+                  
+                  if (imageFormat === 'avif') {
+                    try {
+                      const avifBlob = await convertPngToAvif(pngBlob)
+                      resolve({ filename, blob: avifBlob })
+                    } catch (error) {
+                      console.error('AVIF conversion failed:', error)
+                      resolve(null)
+                    }
+                  } else {
+                    resolve({ filename, blob: pngBlob })
+                  }
                 } else {
                   resolve(null)
                 }
-              }, `image/${imageFormat}`)
+              }, 'image/png')
             }).catch(() => resolve(null))
           }).catch(() => resolve(null))
         }).catch(() => resolve(null))
@@ -701,40 +742,25 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
     }
   }, [mode, file1, file2, startPage, finishPage, numPages1, numPages2, columns, rows, generateCardImage, startingCardNumber])
 
-  if (!file1 && !file2) {
-    return null
-  }
+  const hasFiles = mode === 'single' ? file1 : (file1 && file2)
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '1em', flexWrap: 'wrap' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5em' }}>
-        <select
-          value={imageFormat}
-          onChange={(e) => setImageFormat(e.target.value)}
-          style={{
-            padding: '0.5em',
-            border: '1px solid #ccc',
-            borderRadius: '4px'
-          }}
-          disabled={isExporting}
-        >
-          <option value="png">PNG</option>
-        </select>
-        <button 
-          onClick={exportAllCards}
-          disabled={isExporting}
-          style={{
-            padding: '0.5em 1em',
-            backgroundColor: isExporting ? '#ccc' : '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: isExporting ? 'not-allowed' : 'pointer'
-          }}
-        >
-          {isExporting ? 'Exporting...' : 'Export'}
-        </button>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
+      <button 
+        onClick={exportAllCards}
+        disabled={isExporting || !hasFiles}
+        style={{
+          padding: '0.5em 1em',
+          backgroundColor: (isExporting || !hasFiles) ? '#ccc' : '#007bff',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: (isExporting || !hasFiles) ? 'not-allowed' : 'pointer',
+          alignSelf: 'flex-start'
+        }}
+      >
+        {isExporting ? 'Exporting...' : 'Export'}
+      </button>
       
       {isExporting && (
         <div style={{ 
@@ -790,6 +816,8 @@ function App() {
   const cardThickness = useAppStore((state) => state.cardThickness)
   const update = useAppStore((state) => state.update)
   const [renderedPageDimensions, setRenderedPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
+  const [imageFormat, setImageFormat] = useState('avif')
+  const [isExporting, setIsExporting] = useState(false)
   
   const pageDimensions = useMemo(() => {
     // Use rendered dimensions if available, otherwise calculate standard A4 dimensions at 72 DPI
@@ -1057,18 +1085,34 @@ function App() {
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '100px' }}>
-                Outline Color:
+              <label style={{ display: 'inline-block', width: '120px' }}>
+                Cardstock thickness:
               </label>
-              <select
-                value={outlineColor}
-                onChange={(e) => update('outlineColor', e.target.value)}
-                style={{ width: '80px' }}
-              >
-                <option value="red">Red</option>
-                <option value="blue">Blue</option>
-                <option value="green">Green</option>
-              </select>
+              <input
+                type="number"
+                value={Math.round(cardThickness * 1000 * 100) / 100}
+                onChange={(e) => update('cardThickness', Math.max(0.01, Number(e.target.value)) / 1000)}
+                style={{ width: '80px', marginRight: '4px' }}
+                min="0.01"
+                step="0.01"
+              />
+              <span style={{ marginRight: '8px' }}>mm</span>
+              <span style={{ fontSize: '0.9em', color: '#666' }}>
+                ~{calculateApproximateGSM(cardThickness)} GSM
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '60px' }}>
+                DPI:
+              </label>
+              <input
+                type="number"
+                value={dpi}
+                onChange={(e) => update('dpi', Number(e.target.value))}
+                style={{ width: '60px' }}
+                min="72"
+                step="1"
+              />
             </div>
           </div>
         </div>
@@ -1238,29 +1282,17 @@ function App() {
           </div>
         </div>
         <div style={{ marginBottom: '1em', border: '1px solid #ccc', padding: '1em', borderRadius: '4px' }}>
-          <CardSize
-            columns={columns}
-            rows={rows}
-            marginLeft={marginLeft}
-            marginRight={marginRight}
-            marginTop={marginTop}
-            marginBottom={marginBottom}
-            columnSpacing={columnSpacing}
-            rowSpacing={rowSpacing}
-            dpi={dpi}
-            pageDimensions={pageDimensions}
-          />
-          <div style={{ marginTop: '1em', display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '60px' }}>
-                DPI:
+              <label style={{ display: 'inline-block', width: '140px' }}>
+                Card numbering starts at:
               </label>
               <input
                 type="number"
-                value={dpi}
-                onChange={(e) => update('dpi', Number(e.target.value))}
-                style={{ width: '60px' }}
-                min="72"
+                value={startingCardNumber}
+                onChange={(e) => update('startingCardNumber', Math.max(1, Number(e.target.value)))}
+                style={{ width: '80px' }}
+                min="1"
                 step="1"
               />
             </div>
@@ -1277,35 +1309,49 @@ function App() {
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '140px' }}>
-                Card numbering starts at:
+              <label style={{ display: 'inline-block', width: '100px' }}>
+                Outline Color:
               </label>
-              <input
-                type="number"
-                value={startingCardNumber}
-                onChange={(e) => update('startingCardNumber', Math.max(1, Number(e.target.value)))}
+              <select
+                value={outlineColor}
+                onChange={(e) => update('outlineColor', e.target.value)}
                 style={{ width: '80px' }}
-                min="1"
-                step="1"
-              />
+              >
+                <option value="red">Red</option>
+                <option value="blue">Blue</option>
+                <option value="green">Green</option>
+              </select>
             </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '140px' }}>
-                Card thickness:
-              </label>
-              <input
-                type="number"
-                value={Math.round(cardThickness * 1000 * 100) / 100}
-                onChange={(e) => update('cardThickness', Math.max(0.01, Number(e.target.value)) / 1000)}
-                style={{ width: '80px', marginRight: '4px' }}
-                min="0.01"
-                step="0.01"
-              />
-              <span style={{ marginRight: '8px' }}>mm</span>
-              <span style={{ fontSize: '0.9em', color: '#666' }}>
-                ~{calculateApproximateGSM(cardThickness)} GSM
-              </span>
+              <span style={{ display: 'inline-block', width: '100px' }}>File format:</span>
+              <select
+                value={imageFormat}
+                onChange={(e) => setImageFormat(e.target.value)}
+                style={{
+                  padding: '0.5em',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px'
+                }}
+                disabled={isExporting}
+              >
+                <option value="avif">AVIF (recommended)</option>
+                <option value="png">PNG</option>
+              </select>
             </div>
+            
+            <CardSize
+              columns={columns}
+              rows={rows}
+              marginLeft={marginLeft}
+              marginRight={marginRight}
+              marginTop={marginTop}
+              marginBottom={marginBottom}
+              columnSpacing={columnSpacing}
+              rowSpacing={rowSpacing}
+              dpi={dpi}
+              pageDimensions={pageDimensions}
+            />
+            
             <CardExport
               mode={mode}
               file1={file1}
@@ -1327,6 +1373,9 @@ function App() {
               pageDimensions={pageDimensions}
               startingCardNumber={startingCardNumber}
               cardThickness={cardThickness}
+              imageFormat={imageFormat}
+              isExporting={isExporting}
+              setIsExporting={setIsExporting}
             />
           </div>
         </div>
