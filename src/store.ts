@@ -23,6 +23,7 @@ interface AppState {
   marginUnit: 'mm' | 'inches'
   pageDimensions: {[key: string]: {width: number, height: number}}
   previewCardNumber: number
+  startingCardNumber: number
 
   update: <K extends keyof Omit<AppState, 'update'>>(key: K, value: AppState[K]) => void
   setMode: (mode: 'single' | 'separate') => void
@@ -47,6 +48,7 @@ interface AppState {
   setMarginUnit: (unit: 'mm' | 'inches') => void
   setPageDimensions: (dimensions: {[key: string]: {width: number, height: number}}) => void
   setPreviewCardNumber: (cardNumber: number) => void
+  setStartingCardNumber: (startingNumber: number) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -72,6 +74,7 @@ export const useAppStore = create<AppState>((set) => ({
   marginUnit: 'mm',
   pageDimensions: {},
   previewCardNumber: 1,
+  startingCardNumber: 1,
 
   update: (key, value) => set({ [key]: value } as any),
   setMode: (mode) => set({ mode }),
@@ -96,4 +99,5 @@ export const useAppStore = create<AppState>((set) => ({
   setMarginUnit: (marginUnit) => set({ marginUnit }),
   setPageDimensions: (pageDimensions) => set({ pageDimensions }),
   setPreviewCardNumber: (previewCardNumber) => set({ previewCardNumber }),
+  setStartingCardNumber: (startingCardNumber) => set({ startingCardNumber }),
 }))

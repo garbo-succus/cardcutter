@@ -102,9 +102,10 @@ interface CardPreviewProps {
   rowSpacing: number
   dpi: number
   pageDimensions: {[key: string]: {width: number, height: number}}
+  startingCardNumber: number
 }
 
-function CardPreview({ cardNumber, mode, file1, file2, columns, rows, startPage, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, pageDimensions }: CardPreviewProps) {
+function CardPreview({ cardNumber, mode, file1, file2, columns, rows, startPage, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, pageDimensions, startingCardNumber }: CardPreviewProps) {
   const update = useAppStore((state) => state.update)
   const [frontPreviewUrl, setFrontPreviewUrl] = useState<string | null>(null)
   const [backPreviewUrl, setBackPreviewUrl] = useState<string | null>(null)
@@ -115,8 +116,9 @@ function CardPreview({ cardNumber, mode, file1, file2, columns, rows, startPage,
     if (!file1 && !file2) return null
 
     const cardsPerPage = columns * rows
-    const sheetIndex = Math.floor((cardNumber - 1) / cardsPerPage)
-    const cardIndex = (cardNumber - 1) % cardsPerPage
+    const actualCardNumber = cardNumber + startingCardNumber - 1
+    const sheetIndex = Math.floor((actualCardNumber - startingCardNumber) / cardsPerPage)
+    const cardIndex = (actualCardNumber - startingCardNumber) % cardsPerPage
     const row = Math.floor(cardIndex / columns)
     const col = cardIndex % columns
 
@@ -263,7 +265,7 @@ function CardPreview({ cardNumber, mode, file1, file2, columns, rows, startPage,
     }
 
     generatePreviews()
-  }, [cardNumber, mode, file1, file2, columns, rows, startPage, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, Object.keys(pageDimensions).length, isExpanded])
+  }, [cardNumber, mode, file1, file2, columns, rows, startPage, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, Object.keys(pageDimensions).length, isExpanded, startingCardNumber])
 
   useEffect(() => {
     return () => {
@@ -307,10 +309,14 @@ function CardPreview({ cardNumber, mode, file1, file2, columns, rows, startPage,
                 </label>
                 <input
                   type="number"
-                  value={cardNumber}
-                  onChange={(e) => update('previewCardNumber', Math.max(1, Number(e.target.value)))}
+                  value={cardNumber + startingCardNumber - 1}
+                  onChange={(e) => {
+                    const actualCardNumber = Math.max(startingCardNumber, Number(e.target.value))
+                    const internalCardNumber = actualCardNumber - startingCardNumber + 1
+                    update('previewCardNumber', internalCardNumber)
+                  }}
                   style={{ width: '80px' }}
-                  min="1"
+                  min={startingCardNumber}
                 />
               </div>
               
@@ -322,7 +328,7 @@ function CardPreview({ cardNumber, mode, file1, file2, columns, rows, startPage,
                 <div style={{ display: 'flex', gap: '1em', flexWrap: 'wrap' }}>
                   <div style={{ flex: '1', minWidth: '200px' }}>
                     <h4 style={{ margin: '0 0 0.5em 0', fontSize: '0.9em' }}>
-                      Card {cardNumber} (Front)
+                      Card {cardNumber + startingCardNumber - 1} (Front)
                     </h4>
                     {frontPreviewUrl ? (
                       <img
@@ -350,7 +356,7 @@ function CardPreview({ cardNumber, mode, file1, file2, columns, rows, startPage,
                   
                   <div style={{ flex: '1', minWidth: '200px' }}>
                     <h4 style={{ margin: '0 0 0.5em 0', fontSize: '0.9em' }}>
-                      Card {cardNumber} (Back)
+                      Card {cardNumber + startingCardNumber - 1} (Back)
                     </h4>
                     {backPreviewUrl ? (
                       <img
@@ -404,9 +410,10 @@ interface CardExportProps {
   dpi: number
   templateName: string
   pageDimensions: {[key: string]: {width: number, height: number}}
+  startingCardNumber: number
 }
 
-function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, numPages1, numPages2, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions }: CardExportProps) {
+function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, numPages1, numPages2, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions, startingCardNumber }: CardExportProps) {
   const [isExporting, setIsExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState({ completed: 0, total: 0 })
 
@@ -492,7 +499,8 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
               canvas.toBlob((blob) => {
                 if (blob) {
                   const side = isBack ? 'back' : 'front'
-                  const paddedCardNumber = cardNumber.toString().padStart(3, '0')
+                  const actualCardNumber = cardNumber + startingCardNumber - 1
+                  const paddedCardNumber = actualCardNumber.toString().padStart(3, '0')
                   const filename = `${templateName}-${paddedCardNumber}-${side}.png`
                   resolve({ filename, blob })
                 } else {
@@ -528,9 +536,10 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
     const exportedFiles: Array<{ filename: string, blob: Blob }> = []
     
     try {
-      for (let cardNumber = 1; cardNumber <= totalCards; cardNumber++) {
+      for (let cardIndex = 0; cardIndex < totalCards; cardIndex++) {
+        const cardNumber = cardIndex + startingCardNumber
         const cardsPerPage = columns * rows
-        const sheetIndex = Math.floor((cardNumber - 1) / cardsPerPage)
+        const sheetIndex = Math.floor(cardIndex / cardsPerPage)
         
         // Generate front card
         let frontPdfPageNumber: number
@@ -548,7 +557,7 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
         }
         
         if (frontTargetFile) {
-          const frontCard = await generateCardImage(cardNumber, false, frontTargetFile, frontPdfPageNumber, frontPageKey)
+          const frontCard = await generateCardImage(cardIndex + 1, false, frontTargetFile, frontPdfPageNumber, frontPageKey)
           if (frontCard) {
             exportedFiles.push(frontCard)
           }
@@ -570,13 +579,13 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
         }
         
         if (backTargetFile) {
-          const backCard = await generateCardImage(cardNumber, true, backTargetFile, backPdfPageNumber, backPageKey)
+          const backCard = await generateCardImage(cardIndex + 1, true, backTargetFile, backPdfPageNumber, backPageKey)
           if (backCard) {
             exportedFiles.push(backCard)
           }
         }
         
-        setExportProgress(prev => ({ ...prev, completed: cardNumber }))
+        setExportProgress(prev => ({ ...prev, completed: cardIndex + 1 }))
       }
       
       console.log('Exported files:', exportedFiles.map(f => f.filename))
@@ -587,7 +596,7 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
     } finally {
       setIsExporting(false)
     }
-  }, [mode, file1, file2, startPage, finishPage, numPages1, numPages2, columns, rows, generateCardImage])
+  }, [mode, file1, file2, startPage, finishPage, numPages1, numPages2, columns, rows, generateCardImage, startingCardNumber])
 
   if (!file1 && !file2) {
     return null
@@ -661,6 +670,7 @@ function App() {
   const dpi = useAppStore((state) => state.dpi)
   const templateName = useAppStore((state) => state.templateName)
   const previewCardNumber = useAppStore((state) => state.previewCardNumber)
+  const startingCardNumber = useAppStore((state) => state.startingCardNumber)
   const update = useAppStore((state) => state.update)
   const [renderedPageDimensions, setRenderedPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
   
@@ -720,7 +730,7 @@ function App() {
     update('numPages2', numPages)
   }
 
-  const GridOverlay = ({ pageWidth, pageHeight, isBackPage, pageOffset, mode }: { pageWidth: number, pageHeight: number, isBackPage?: boolean, pageOffset?: number, mode: 'single' | 'separate' }) => {
+  const GridOverlay = ({ pageWidth, pageHeight, isBackPage, pageOffset, mode, startingCardNumber }: { pageWidth: number, pageHeight: number, isBackPage?: boolean, pageOffset?: number, mode: 'single' | 'separate', startingCardNumber: number }) => {
     // Convert mm to pixels assuming 72 DPI (standard PDF DPI)
     // 1 inch = 25.4 mm, 1 inch = 72 pixels, so 1 mm = 72/25.4 ≈ 2.83 pixels
     const mmToPixels = (mm: number) => mm * (72 / 25.4)
@@ -750,11 +760,11 @@ function App() {
         
         if (isBackPage) {
           // Back pages: reverse the numbering with (Back) suffix within each row
-          const baseNumber = row * columns + (columns - col) + sheetOffset
+          const baseNumber = row * columns + (columns - col) + sheetOffset + startingCardNumber - 1
           return `${baseNumber} (Back)`
         } else {
           // Front pages: normal numbering with (Front) suffix
-          const cardNumber = row * columns + col + 1 + sheetOffset
+          const cardNumber = row * columns + col + 1 + sheetOffset + startingCardNumber - 1
           return `${cardNumber} (Front)`
         }
       } else {
@@ -763,11 +773,11 @@ function App() {
         
         if (isBackPage) {
           // Back pages: reverse the numbering with (Back) suffix within each row
-          const baseNumber = row * columns + (columns - col) + sheetOffset
+          const baseNumber = row * columns + (columns - col) + sheetOffset + startingCardNumber - 1
           return `${baseNumber} (Back)`
         } else {
           // Front pages: normal numbering with (Front) suffix
-          const cardNumber = row * columns + col + 1 + sheetOffset
+          const cardNumber = row * columns + col + 1 + sheetOffset + startingCardNumber - 1
           return `${cardNumber} (Front)`
         }
       }
@@ -1160,8 +1170,21 @@ function App() {
                 type="text"
                 value={templateName}
                 onChange={(e) => update('templateName', e.target.value)}
-                placeholder="card"
+                placeholder="mycard"
                 style={{ width: '120px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '140px' }}>
+                Card numbering starts at:
+              </label>
+              <input
+                type="number"
+                value={startingCardNumber}
+                onChange={(e) => update('startingCardNumber', Math.max(1, Number(e.target.value)))}
+                style={{ width: '80px' }}
+                min="1"
+                step="1"
               />
             </div>
             <CardExport
@@ -1183,6 +1206,7 @@ function App() {
               dpi={dpi}
               templateName={templateName}
               pageDimensions={pageDimensions}
+              startingCardNumber={startingCardNumber}
             />
           </div>
         </div>
@@ -1203,6 +1227,7 @@ function App() {
         rowSpacing={rowSpacing}
         dpi={dpi}
         pageDimensions={pageDimensions}
+        startingCardNumber={startingCardNumber}
       />
 
       <div style={{ display: 'flex', gap: '2em' }}>
@@ -1264,6 +1289,7 @@ function App() {
                                   isBackPage={(pageNumber - startPage + 1) % 2 === 0}
                                   pageOffset={pageNumber - startPage}
                                   mode={mode}
+                                  startingCardNumber={startingCardNumber}
                                 />
                               </div>
                             )}
@@ -1345,6 +1371,7 @@ function App() {
                                       isBackPage={false}
                                       pageOffset={pageNumber - startPage}
                                       mode={mode}
+                                      startingCardNumber={startingCardNumber}
                                     />
                                   </div>
                                 )}
@@ -1406,6 +1433,7 @@ function App() {
                                           isBackPage={true}
                                           pageOffset={pageNumber - startPage}
                                           mode={mode}
+                                          startingCardNumber={startingCardNumber}
                                         />
                                       </div>
                                     )}
