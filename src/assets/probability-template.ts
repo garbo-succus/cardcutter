@@ -12,10 +12,10 @@ interface CardContent {
 
 interface CardChild {
   name: string;
-  position: [number, number, number];
-  rotation: [number, number, number];
   src: string;
   template: string;
+  position?: [number, number, number];
+  rotation?: [number, number, number];
   children?: CardChild[];
 }
 
@@ -24,6 +24,8 @@ interface ProbabilityTemplate {
   templates: {
     [key: string]: {
       name: string;
+      position: [number, number, number];
+      rotation: [number, number, number];
     };
   };
   children: CardChild[];
@@ -37,17 +39,29 @@ const createCardContent = (templateName: string, cardNumber: number, size: [numb
   content: {
     front: `/${templateName}-${cardNumber.toString().padStart(3, '0')}-front.png`,
     back: `/${templateName}-${cardNumber.toString().padStart(3, '0')}-back.png`,
-    size: size
+    size: [
+      Math.round(size[0] * 10000) / 10000,
+      Math.round(size[1] * 10000) / 10000,
+      Math.round(size[2] * 10000) / 10000
+    ]
   }
 });
 
-const createCard = (templateName: string, cardNumber: number, cardIndex: number, size: [number, number, number]): CardChild => ({
-  name: `${templateName} #${cardNumber}`,
-  position: cardIndex === 0 ? [0, 0, 0] : [0, 0, size[2]],
-  rotation: [0, 0, 0],
-  src: `data:application/json;charset=utf-8,${JSON.stringify(createCardContent(templateName, cardNumber, size))}`,
-  template: templateName
-});
+const createCard = (templateName: string, cardNumber: number, cardIndex: number, size: [number, number, number]): CardChild => {
+  const card: CardChild = {
+    name: `${templateName} #${cardNumber}`,
+    src: `data:application/json;charset=utf-8,${JSON.stringify(createCardContent(templateName, cardNumber, size))}`,
+    template: templateName
+  };
+  
+  // Only the first card (root) gets position and rotation
+  if (cardIndex === 0) {
+    card.position = [0, 0, 0];
+    card.rotation = [0, 0, 0];
+  }
+  
+  return card;
+};
 
 export function generateProbabilityJson(
   templateName: string, 
@@ -72,7 +86,9 @@ export function generateProbabilityJson(
     probability: "2024-01-01",
     templates: {
       [templateName]: {
-        name: `${templateName} card`
+        name: `${templateName} card`,
+        position: [0, 0, Math.round(size[2] * 10000) / 10000],
+        rotation: [0, 0, 0]
       }
     },
     children: nestedCards ? [nestedCards] : []

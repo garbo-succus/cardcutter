@@ -89,6 +89,48 @@ function CardSize({ columns, rows, marginLeft, marginRight, marginTop, marginBot
   )
 }
 
+function calculateCardDimensionsInMeters(columns: number, rows: number, marginLeft: number, marginRight: number, marginTop: number, marginBottom: number, columnSpacing: number, rowSpacing: number, pageDimensions: {[key: string]: {width: number, height: number}}) {
+  if (Object.keys(pageDimensions).length === 0) return { width: 0.063, height: 0.088 }; // Standard card size fallback
+  
+  const firstPageKey = Object.keys(pageDimensions)[0]
+  const pageWidth = pageDimensions[firstPageKey].width
+  const pageHeight = pageDimensions[firstPageKey].height
+  
+  const mmToPixels = (mm: number) => mm * (72 / 25.4)
+  const pixelsToMm = (pixels: number) => pixels / (72 / 25.4)
+  const mmToMeters = (mm: number) => mm / 1000
+  
+  const marginLeftPx = mmToPixels(marginLeft)
+  const marginRightPx = mmToPixels(marginRight)
+  const marginTopPx = mmToPixels(marginTop)
+  const marginBottomPx = mmToPixels(marginBottom)
+  const columnSpacingPx = mmToPixels(columnSpacing)
+  const rowSpacingPx = mmToPixels(rowSpacing)
+  
+  const totalColumnSpacing = columnSpacingPx * (columns - 1)
+  const totalRowSpacing = rowSpacingPx * (rows - 1)
+  
+  const availableWidth = pageWidth - marginLeftPx - marginRightPx - totalColumnSpacing
+  const availableHeight = pageHeight - marginTopPx - marginBottomPx - totalRowSpacing
+  const cellWidth = availableWidth / columns
+  const cellHeight = availableHeight / rows
+  
+  const cardWidthMm = pixelsToMm(cellWidth)
+  const cardHeightMm = pixelsToMm(cellHeight)
+  
+  return {
+    width: mmToMeters(cardWidthMm),
+    height: mmToMeters(cardHeightMm)
+  }
+}
+
+function calculateApproximateGSM(thicknessMeters: number) {
+  // Approximate conversion: 1 meter thickness ≈ 800,000 GSM (for paper density ~0.8 g/cm³)
+  // More realistic: standard cardstock thickness 0.0003m ≈ 240 GSM
+  const gsmPerMeter = 800000
+  return Math.round(thicknessMeters * gsmPerMeter)
+}
+
 interface CardPreviewProps {
   cardNumber: number
   mode: 'single' | 'separate'
@@ -414,11 +456,13 @@ interface CardExportProps {
   templateName: string
   pageDimensions: {[key: string]: {width: number, height: number}}
   startingCardNumber: number
+  cardThickness: number
 }
 
-function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, numPages1, numPages2, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions, startingCardNumber }: CardExportProps) {
+function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, numPages1, numPages2, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions, startingCardNumber, cardThickness }: CardExportProps) {
   const [isExporting, setIsExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState({ completed: 0, total: 0 })
+  const [imageFormat, setImageFormat] = useState('png')
 
   const generateCardImage = useCallback(async (cardNumber: number, isBack: boolean, targetFile: File, pdfPageNumber: number, pageKey: string): Promise<{ filename: string, blob: Blob } | null> => {
     const dimensions = pageDimensions[pageKey]
@@ -504,12 +548,12 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
                   const side = isBack ? 'back' : 'front'
                   const actualCardNumber = cardNumber + startingCardNumber - 1
                   const paddedCardNumber = actualCardNumber.toString().padStart(3, '0')
-                  const filename = `${templateName}-${paddedCardNumber}-${side}.png`
+                  const filename = `${templateName}-${paddedCardNumber}-${side}.${imageFormat}`
                   resolve({ filename, blob })
                 } else {
                   resolve(null)
                 }
-              }, 'image/png')
+              }, `image/${imageFormat}`)
             }).catch(() => resolve(null))
           }).catch(() => resolve(null))
         }).catch(() => resolve(null))
@@ -518,7 +562,7 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
     })
   }, [columns, rows, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions])
 
-  const createAndDownloadZip = useCallback(async (exportedFiles: Array<{ filename: string, blob: Blob }>, templateName: string, totalCards: number, startingCardNumber: number) => {
+  const createAndDownloadZip = useCallback(async (exportedFiles: Array<{ filename: string, blob: Blob }>, templateName: string, totalCards: number, startingCardNumber: number, cardThickness: number) => {
     return new Promise<void>((resolve, reject) => {
       const zipFiles: Record<string, Uint8Array> = {}
       
@@ -527,42 +571,12 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
       zipFiles['package.json'] = new TextEncoder().encode(packageJson)
       
       // Calculate card size from current settings
-      const calculateCardSize = () => {
-        if (Object.keys(pageDimensions).length === 0) return [63, 88, 0.1] as [number, number, number]; // Standard card size fallback
-        
-        const firstPageKey = Object.keys(pageDimensions)[0]
-        const pageWidth = pageDimensions[firstPageKey].width
-        const pageHeight = pageDimensions[firstPageKey].height
-        
-        const mmToPixels = (mm: number) => mm * (72 / 25.4)
-        const pixelsToMm = (pixels: number) => pixels / (72 / 25.4)
-        
-        const marginLeftPx = mmToPixels(marginLeft)
-        const marginRightPx = mmToPixels(marginRight)
-        const marginTopPx = mmToPixels(marginTop)
-        const marginBottomPx = mmToPixels(marginBottom)
-        const columnSpacingPx = mmToPixels(columnSpacing)
-        const rowSpacingPx = mmToPixels(rowSpacing)
-        
-        const totalColumnSpacing = columnSpacingPx * (columns - 1)
-        const totalRowSpacing = rowSpacingPx * (rows - 1)
-        
-        const availableWidth = pageWidth - marginLeftPx - marginRightPx - totalColumnSpacing
-        const availableHeight = pageHeight - marginTopPx - marginBottomPx - totalRowSpacing
-        const cellWidth = availableWidth / columns
-        const cellHeight = availableHeight / rows
-        
-        const cardWidthMm = pixelsToMm(cellWidth)
-        const cardHeightMm = pixelsToMm(cellHeight)
-        
-        return [
-          Math.round(cardWidthMm * 10) / 10,
-          Math.round(cardHeightMm * 10) / 10, 
-          0.1 // thickness in mm
-        ] as [number, number, number]
-      }
-      
-      const cardSize = calculateCardSize()
+      const cardDimensions = calculateCardDimensionsInMeters(columns, rows, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, pageDimensions)
+      const cardSize: [number, number, number] = [
+        cardDimensions.width,
+        cardDimensions.height,
+        cardThickness
+      ]
       
       // Generate probability.json
       const probabilityJson = generateProbabilityJson(templateName, totalCards, startingCardNumber, cardSize)
@@ -598,7 +612,7 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
         })
       }).catch(reject)
     })
-  }, [columns, rows, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, pageDimensions])
+  }, [columns, rows, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, pageDimensions, cardThickness])
 
   const exportAllCards = useCallback(async () => {
     if (!file1 && !file2) return
@@ -677,7 +691,7 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
       console.log('File objects:', exportedFiles)
       
       // Create zip file with folder structure
-      await createAndDownloadZip(exportedFiles, templateName, totalCards, startingCardNumber)
+      await createAndDownloadZip(exportedFiles, templateName, totalCards, startingCardNumber, cardThickness)
       
     } catch (error) {
       console.error('Export failed:', error)
@@ -691,21 +705,35 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '1em' }}>
-      <button 
-        onClick={exportAllCards}
-        disabled={isExporting}
-        style={{
-          padding: '0.5em 1em',
-          backgroundColor: isExporting ? '#ccc' : '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: isExporting ? 'not-allowed' : 'pointer'
-        }}
-      >
-        {isExporting ? 'Exporting...' : 'Export'}
-      </button>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '1em', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5em' }}>
+        <select
+          value={imageFormat}
+          onChange={(e) => setImageFormat(e.target.value)}
+          style={{
+            padding: '0.5em',
+            border: '1px solid #ccc',
+            borderRadius: '4px'
+          }}
+          disabled={isExporting}
+        >
+          <option value="png">PNG</option>
+        </select>
+        <button 
+          onClick={exportAllCards}
+          disabled={isExporting}
+          style={{
+            padding: '0.5em 1em',
+            backgroundColor: isExporting ? '#ccc' : '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: isExporting ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {isExporting ? 'Exporting...' : 'Export'}
+        </button>
+      </div>
       
       {isExporting && (
         <div style={{ 
@@ -759,6 +787,7 @@ function App() {
   const templateName = useAppStore((state) => state.templateName)
   const previewCardNumber = useAppStore((state) => state.previewCardNumber)
   const startingCardNumber = useAppStore((state) => state.startingCardNumber)
+  const cardThickness = useAppStore((state) => state.cardThickness)
   const update = useAppStore((state) => state.update)
   const [renderedPageDimensions, setRenderedPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
   
@@ -992,40 +1021,38 @@ function App() {
         <div style={{ border: '1px solid #ccc', padding: '1em', borderRadius: '4px', flex: '1', minWidth: '250px' }}>
           <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>Sheet Options</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
-            {(file1 || file2) && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <label style={{ display: 'inline-block', width: '100px' }}>
-                    Start Page:
-                  </label>
-                  <input
-                    type="number"
-                    value={startPage}
-                    onChange={(e) => update('startPage', Math.max(1, Math.min(Number(e.target.value), Math.max(numPages1, numPages2))))}
-                    style={{ width: '60px' }}
-                    min="1"
-                    max={Math.max(numPages1, numPages2)}
-                  />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <label style={{ display: 'inline-block', width: '100px' }}>
-                    Finish Page:
-                  </label>
-                  <input
-                    type="number"
-                    value={finishPage || Math.max(numPages1, numPages2)}
-                    onChange={(e) => {
-                      const maxPages = Math.max(numPages1, numPages2)
-                      const value = Number(e.target.value)
-                      update('finishPage', value === maxPages ? null : Math.max(startPage, Math.min(value, maxPages)))
-                    }}
-                    style={{ width: '60px' }}
-                    min={startPage}
-                    max={Math.max(numPages1, numPages2)}
-                  />
-                </div>
-              </>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '100px' }}>
+                Start Page:
+              </label>
+              <input
+                type="number"
+                value={startPage}
+                onChange={(e) => update('startPage', Math.max(1, Math.min(Number(e.target.value), Math.max(numPages1, numPages2))))}
+                style={{ width: '60px' }}
+                min="1"
+                max={Math.max(numPages1, numPages2) || 1}
+                disabled
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '100px' }}>
+                Finish Page:
+              </label>
+              <input
+                type="number"
+                value={finishPage || Math.max(numPages1, numPages2) || 1}
+                onChange={(e) => {
+                  const maxPages = Math.max(numPages1, numPages2)
+                  const value = Number(e.target.value)
+                  update('finishPage', value === maxPages ? null : Math.max(startPage, Math.min(value, maxPages)))
+                }}
+                style={{ width: '60px' }}
+                min={startPage}
+                max={Math.max(numPages1, numPages2) || 1}
+                disabled
+              />
+            </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <label style={{ display: 'inline-block', width: '100px' }}>
                 Rotation:
@@ -1275,6 +1302,23 @@ function App() {
                 step="1"
               />
             </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '140px' }}>
+                Card thickness:
+              </label>
+              <input
+                type="number"
+                value={Math.round(cardThickness * 1000 * 100) / 100}
+                onChange={(e) => update('cardThickness', Math.max(0.01, Number(e.target.value)) / 1000)}
+                style={{ width: '80px', marginRight: '4px' }}
+                min="0.01"
+                step="0.01"
+              />
+              <span style={{ marginRight: '8px' }}>mm</span>
+              <span style={{ fontSize: '0.9em', color: '#666' }}>
+                ~{calculateApproximateGSM(cardThickness)} GSM
+              </span>
+            </div>
             <CardExport
               mode={mode}
               file1={file1}
@@ -1295,6 +1339,7 @@ function App() {
               templateName={templateName}
               pageDimensions={pageDimensions}
               startingCardNumber={startingCardNumber}
+              cardThickness={cardThickness}
             />
           </div>
         </div>
