@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -86,6 +86,303 @@ function CardSize({ columns, rows, marginLeft, marginRight, marginTop, marginBot
   )
 }
 
+interface CardPreviewProps {
+  cardNumber: number
+  mode: 'single' | 'separate'
+  file1: File | null
+  file2: File | null
+  columns: number
+  rows: number
+  startPage: number
+  marginLeft: number
+  marginRight: number
+  marginTop: number
+  marginBottom: number
+  columnSpacing: number
+  rowSpacing: number
+  dpi: number
+  pageDimensions: {[key: string]: {width: number, height: number}}
+}
+
+function CardPreview({ cardNumber, mode, file1, file2, columns, rows, startPage, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, pageDimensions }: CardPreviewProps) {
+  const update = useAppStore((state) => state.update)
+  const [frontPreviewUrl, setFrontPreviewUrl] = useState<string | null>(null)
+  const [backPreviewUrl, setBackPreviewUrl] = useState<string | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  const generateCardPreview = useCallback(async (isBack: boolean = false) => {
+    if (!file1 && !file2) return null
+
+    const cardsPerPage = columns * rows
+    const sheetIndex = Math.floor((cardNumber - 1) / cardsPerPage)
+    const cardIndex = (cardNumber - 1) % cardsPerPage
+    const row = Math.floor(cardIndex / columns)
+    const col = cardIndex % columns
+
+    let pdfPageNumber: number
+    let targetFile: File | null
+
+    if (mode === 'single') {
+      const totalSheetsNeeded = Math.ceil((cardNumber) / cardsPerPage)
+      if (isBack) {
+        pdfPageNumber = startPage + sheetIndex * 2 + 1
+      } else {
+        pdfPageNumber = startPage + sheetIndex * 2
+      }
+      targetFile = file1
+    } else {
+      pdfPageNumber = startPage + sheetIndex
+      targetFile = isBack ? file2 : file1
+    }
+
+    if (!targetFile) return null
+
+    const pageKey = mode === 'single' ? `page1_${pdfPageNumber}` : 
+                   (isBack ? `page2_${pdfPageNumber}` : `page1_${pdfPageNumber}`)
+    
+    const dimensions = pageDimensions[pageKey]
+    if (!dimensions) return null
+
+    const mmToPixels = (mm: number) => mm * (dpi / 25.4)
+    
+    const marginLeftPx = mmToPixels(marginLeft)
+    const marginRightPx = mmToPixels(marginRight)
+    const marginTopPx = mmToPixels(marginTop)
+    const marginBottomPx = mmToPixels(marginBottom)
+    const columnSpacingPx = mmToPixels(columnSpacing)
+    const rowSpacingPx = mmToPixels(rowSpacing)
+    
+    const totalColumnSpacing = columnSpacingPx * (columns - 1)
+    const totalRowSpacing = rowSpacingPx * (rows - 1)
+    
+    const pageWidthPx = dimensions.width * (dpi / 72)
+    const pageHeightPx = dimensions.height * (dpi / 72)
+    
+    const availableWidth = pageWidthPx - marginLeftPx - marginRightPx - totalColumnSpacing
+    const availableHeight = pageHeightPx - marginTopPx - marginBottomPx - totalRowSpacing
+    const cellWidth = availableWidth / columns
+    const cellHeight = availableHeight / rows
+
+    let cardX: number, cardY: number
+    if (isBack && mode === 'single') {
+      cardX = marginLeftPx + (columns - col - 1) * (cellWidth + columnSpacingPx)
+    } else {
+      cardX = marginLeftPx + col * (cellWidth + columnSpacingPx)
+    }
+    cardY = marginTopPx + row * (cellHeight + rowSpacingPx)
+
+    return new Promise<string | null>((resolve) => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        resolve(null)
+        return
+      }
+
+      canvas.width = Math.round(cellWidth)
+      canvas.height = Math.round(cellHeight)
+
+      const tempCanvas = document.createElement('canvas')
+      const tempCtx = tempCanvas.getContext('2d')
+      if (!tempCtx) {
+        resolve(null)
+        return
+      }
+
+      const fileReader = new FileReader()
+      fileReader.onload = function(e) {
+        const typedArray = new Uint8Array(e.target!.result as ArrayBuffer)
+        const loadingTask = pdfjs.getDocument({ data: typedArray })
+        loadingTask.promise.then((pdf) => {
+        pdf.getPage(pdfPageNumber).then((page) => {
+          const scale = dpi / 72
+          const viewport = page.getViewport({ scale })
+
+          tempCanvas.width = viewport.width
+          tempCanvas.height = viewport.height
+
+          const renderContext = {
+            canvasContext: tempCtx,
+            viewport: viewport,
+          }
+
+          page.render(renderContext).promise.then(() => {
+            ctx.drawImage(
+              tempCanvas,
+              cardX, cardY, cellWidth, cellHeight,
+              0, 0, cellWidth, cellHeight
+            )
+
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const url = URL.createObjectURL(blob)
+                resolve(url)
+              } else {
+                resolve(null)
+              }
+            }, 'image/png')
+          }).catch(() => resolve(null))
+        }).catch(() => resolve(null))
+        }).catch(() => resolve(null))
+      }
+      fileReader.readAsArrayBuffer(targetFile)
+    })
+  }, [cardNumber, mode, file1, file2, columns, rows, startPage, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, pageDimensions])
+
+  useEffect(() => {
+    const generatePreviews = async () => {
+      if (!file1 && !file2) return
+      if (!isExpanded) return
+      
+      setIsGenerating(true)
+      
+      // Cleanup old URLs
+      if (frontPreviewUrl) {
+        URL.revokeObjectURL(frontPreviewUrl)
+        setFrontPreviewUrl(null)
+      }
+      if (backPreviewUrl) {
+        URL.revokeObjectURL(backPreviewUrl)
+        setBackPreviewUrl(null)
+      }
+      
+      try {
+        const frontUrl = await generateCardPreview(false)
+        setFrontPreviewUrl(frontUrl)
+        
+        const backUrl = await generateCardPreview(true)
+        setBackPreviewUrl(backUrl)
+      } catch (error) {
+        console.error('Error generating card previews:', error)
+      } finally {
+        setIsGenerating(false)
+      }
+    }
+
+    generatePreviews()
+  }, [cardNumber, mode, file1, file2, columns, rows, startPage, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, Object.keys(pageDimensions).length, isExpanded])
+
+  useEffect(() => {
+    return () => {
+      if (frontPreviewUrl) URL.revokeObjectURL(frontPreviewUrl)
+      if (backPreviewUrl) URL.revokeObjectURL(backPreviewUrl)
+    }
+  }, [])
+
+  return (
+    <div style={{ border: '1px solid #ccc', padding: '1em', borderRadius: '4px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5em' }}>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '1em',
+            marginRight: '0.5em',
+            padding: '0',
+            width: '20px',
+            textAlign: 'center'
+          }}
+        >
+          {isExpanded ? '−' : '+'}
+        </button>
+        <h3 style={{ margin: '0', fontSize: '1em' }}>Card Preview</h3>
+      </div>
+      
+      {isExpanded && (
+        <>
+          {(!file1 && !file2) ? (
+            <div style={{ color: '#666', textAlign: 'center', padding: '2em' }}>
+              Load a PDF to see card preview
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1em' }}>
+                <label style={{ display: 'inline-block', width: '100px' }}>
+                  Card Number:
+                </label>
+                <input
+                  type="number"
+                  value={cardNumber}
+                  onChange={(e) => update('previewCardNumber', Math.max(1, Number(e.target.value)))}
+                  style={{ width: '80px' }}
+                  min="1"
+                />
+              </div>
+              
+              {isGenerating ? (
+                <div style={{ textAlign: 'center', padding: '2em', color: '#666' }}>
+                  Generating preview...
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '1em', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1', minWidth: '200px' }}>
+                    <h4 style={{ margin: '0 0 0.5em 0', fontSize: '0.9em' }}>
+                      Card {cardNumber} (Front)
+                    </h4>
+                    {frontPreviewUrl ? (
+                      <img
+                        src={frontPreviewUrl}
+                        alt={`Card ${cardNumber} Front`}
+                        style={{
+                          maxWidth: '100%',
+                          height: 'auto',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px'
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        border: '2px dashed #ccc',
+                        padding: '2em',
+                        textAlign: 'center',
+                        color: '#666',
+                        borderRadius: '4px'
+                      }}>
+                        Front not available
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div style={{ flex: '1', minWidth: '200px' }}>
+                    <h4 style={{ margin: '0 0 0.5em 0', fontSize: '0.9em' }}>
+                      Card {cardNumber} (Back)
+                    </h4>
+                    {backPreviewUrl ? (
+                      <img
+                        src={backPreviewUrl}
+                        alt={`Card ${cardNumber} Back`}
+                        style={{
+                          maxWidth: '100%',
+                          height: 'auto',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px'
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        border: '2px dashed #ccc',
+                        padding: '2em',
+                        textAlign: 'center',
+                        color: '#666',
+                        borderRadius: '4px'
+                      }}>
+                        Back not available
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 function App() {
   const mode = useAppStore((state) => state.mode)
   const file1 = useAppStore((state) => state.file1)
@@ -107,6 +404,7 @@ function App() {
   const outlineColor = useAppStore((state) => state.outlineColor)
   const dpi = useAppStore((state) => state.dpi)
   const templateName = useAppStore((state) => state.templateName)
+  const previewCardNumber = useAppStore((state) => state.previewCardNumber)
   const update = useAppStore((state) => state.update)
   const [renderedPageDimensions, setRenderedPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
   
@@ -612,6 +910,24 @@ function App() {
             </div>
           </div>
         </div>
+
+      <CardPreview
+        cardNumber={previewCardNumber}
+        mode={mode}
+        file1={file1}
+        file2={file2}
+        columns={columns}
+        rows={rows}
+        startPage={startPage}
+        marginLeft={marginLeft}
+        marginRight={marginRight}
+        marginTop={marginTop}
+        marginBottom={marginBottom}
+        columnSpacing={columnSpacing}
+        rowSpacing={rowSpacing}
+        dpi={dpi}
+        pageDimensions={pageDimensions}
+      />
 
       <div style={{ display: 'flex', gap: '2em' }}>
         <div style={{ flex: 1 }}>
