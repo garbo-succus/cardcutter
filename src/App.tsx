@@ -466,7 +466,7 @@ function App() {
     update('numPages2', numPages)
   }
 
-  const GridOverlay = ({ pageWidth, pageHeight, isBackPage, pageOffset }: { pageWidth: number, pageHeight: number, isBackPage?: boolean, pageOffset?: number }) => {
+  const GridOverlay = ({ pageWidth, pageHeight, isBackPage, pageOffset, mode }: { pageWidth: number, pageHeight: number, isBackPage?: boolean, pageOffset?: number, mode: 'single' | 'separate' }) => {
     // Convert mm to pixels assuming 72 DPI (standard PDF DPI)
     // 1 inch = 25.4 mm, 1 inch = 72 pixels, so 1 mm = 72/25.4 ≈ 2.83 pixels
     const mmToPixels = (mm: number) => mm * (72 / 25.4)
@@ -489,20 +489,33 @@ function App() {
 
     const getCardNumber = (row: number, col: number): string => {
       const cardsPerPage = columns * rows
-      // For front/back pairs, we need to calculate which "sheet" this is
-      // Each sheet has front and back, so we divide by 2 and floor
-      const sheetOffset = Math.floor((pageOffset || 0) / 2) * cardsPerPage
       
-      if (isBackPage) {
-        // Back pages: reverse the numbering with (Back) suffix within each row
-        // First row: 4 (Back), 3 (Back), 2 (Back), 1 (Back)
-        // Second row: 8 (Back), 7 (Back), 6 (Back), 5 (Back)
-        const baseNumber = row * columns + (columns - col) + sheetOffset
-        return `${baseNumber} (Back)`
+      if (mode === 'single') {
+        // Single PDF mode: front/back pairs, divide by 2 for sheet offset
+        const sheetOffset = Math.floor((pageOffset || 0) / 2) * cardsPerPage
+        
+        if (isBackPage) {
+          // Back pages: reverse the numbering with (Back) suffix within each row
+          const baseNumber = row * columns + (columns - col) + sheetOffset
+          return `${baseNumber} (Back)`
+        } else {
+          // Front pages: normal numbering with (Front) suffix
+          const cardNumber = row * columns + col + 1 + sheetOffset
+          return `${cardNumber} (Front)`
+        }
       } else {
-        // Front pages: normal numbering with (Front) suffix
-        const cardNumber = row * columns + col + 1 + sheetOffset
-        return `${cardNumber} (Front)`
+        // Separate PDF mode: each PDF shows the same card numbers
+        const sheetOffset = (pageOffset || 0) * cardsPerPage
+        
+        if (isBackPage) {
+          // Back pages: reverse the numbering with (Back) suffix within each row
+          const baseNumber = row * columns + (columns - col) + sheetOffset
+          return `${baseNumber} (Back)`
+        } else {
+          // Front pages: normal numbering with (Front) suffix
+          const cardNumber = row * columns + col + 1 + sheetOffset
+          return `${cardNumber} (Front)`
+        }
       }
     }
 
@@ -981,6 +994,7 @@ function App() {
                                   pageHeight={dimensions.height} 
                                   isBackPage={(pageNumber - startPage + 1) % 2 === 0}
                                   pageOffset={pageNumber - startPage}
+                                  mode={mode}
                                 />
                               </div>
                             )}
@@ -1061,6 +1075,7 @@ function App() {
                                       pageHeight={pageDimensions[`page1_${pageNumber}`].height} 
                                       isBackPage={false}
                                       pageOffset={pageNumber - startPage}
+                                      mode={mode}
                                     />
                                   </div>
                                 )}
@@ -1121,6 +1136,7 @@ function App() {
                                           pageHeight={pageDimensions[`page2_${pageNumber}`].height} 
                                           isBackPage={true}
                                           pageOffset={pageNumber - startPage}
+                                          mode={mode}
                                         />
                                       </div>
                                     )}
