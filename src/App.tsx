@@ -88,10 +88,10 @@ function CardSize({ columns, rows, marginLeft, marginRight, marginTop, marginBot
 
 function App() {
   const mode = useAppStore((state) => state.mode)
-  const [file1, setFile1] = useState<File | null>(null)
-  const [numPages1, setNumPages1] = useState<number>(0)
-  const [file2, setFile2] = useState<File | null>(null)
-  const [numPages2, setNumPages2] = useState<number>(0)
+  const file1 = useAppStore((state) => state.file1)
+  const numPages1 = useAppStore((state) => state.numPages1)
+  const file2 = useAppStore((state) => state.file2)
+  const numPages2 = useAppStore((state) => state.numPages2)
   
   const columns = useAppStore((state) => state.columns)
   const rows = useAppStore((state) => state.rows)
@@ -112,23 +112,23 @@ function App() {
   const onFile1Change = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0]
     if (selectedFile) {
-      setFile1(selectedFile)
+      update('file1', selectedFile)
     }
   }
 
   const onFile2Change = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0]
     if (selectedFile) {
-      setFile2(selectedFile)
+      update('file2', selectedFile)
     }
   }
 
   const onDocument1LoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages1(numPages)
+    update('numPages1', numPages)
   }
 
   const onDocument2LoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages2(numPages)
+    update('numPages2', numPages)
   }
 
   const GridOverlay = ({ pageWidth, pageHeight, isBackPage, pageOffset }: { pageWidth: number, pageHeight: number, isBackPage?: boolean, pageOffset?: number }) => {
