@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -108,7 +108,41 @@ function App() {
   const dpi = useAppStore((state) => state.dpi)
   const templateName = useAppStore((state) => state.templateName)
   const update = useAppStore((state) => state.update)
-  const [pageDimensions, setPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
+  const [renderedPageDimensions, setRenderedPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
+  
+  const pageDimensions = useMemo(() => {
+    // Use rendered dimensions if available, otherwise calculate standard A4 dimensions at 72 DPI
+    if (Object.keys(renderedPageDimensions).length > 0) {
+      return renderedPageDimensions
+    }
+    
+    // Standard A4 dimensions: 210 × 297 mm
+    // Convert to pixels at 72 DPI: (mm * 72) / 25.4
+    const a4Width = (210 * 72) / 25.4  // ~595 pixels
+    const a4Height = (297 * 72) / 25.4 // ~842 pixels
+    
+    const standardDimensions: {[key: string]: {width: number, height: number}} = {}
+    
+    // Create dimensions for potential pages based on current file loading state
+    if (mode === 'single' && numPages1 > 0) {
+      for (let i = 1; i <= numPages1; i++) {
+        standardDimensions[`page1_${i}`] = { width: a4Width, height: a4Height }
+      }
+    } else if (mode === 'separate') {
+      if (numPages1 > 0) {
+        for (let i = 1; i <= numPages1; i++) {
+          standardDimensions[`page1_${i}`] = { width: a4Width, height: a4Height }
+        }
+      }
+      if (numPages2 > 0) {
+        for (let i = 1; i <= numPages2; i++) {
+          standardDimensions[`page2_${i}`] = { width: a4Width, height: a4Height }
+        }
+      }
+    }
+    
+    return standardDimensions
+  }, [renderedPageDimensions, mode, numPages1, numPages2])
 
   const onFile1Change = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0]
@@ -611,7 +645,7 @@ function App() {
                               if (pageElement) {
                                 const canvas = pageElement.querySelector('canvas')
                                 if (canvas) {
-                                  setPageDimensions(prev => ({
+                                  setRenderedPageDimensions(prev => ({
                                     ...prev,
                                     [pageKey]: { width: canvas.clientWidth, height: canvas.clientHeight }
                                   }))
@@ -691,7 +725,7 @@ function App() {
                                   if (pageElement) {
                                     const canvas = pageElement.querySelector('canvas')
                                     if (canvas) {
-                                      setPageDimensions(prev => ({
+                                      setRenderedPageDimensions(prev => ({
                                         ...prev,
                                         [`page1_${pageNumber}`]: { width: canvas.clientWidth, height: canvas.clientHeight }
                                       }))
@@ -751,7 +785,7 @@ function App() {
                                       if (pageElement) {
                                         const canvas = pageElement.querySelector('canvas')
                                         if (canvas) {
-                                          setPageDimensions(prev => ({
+                                          setRenderedPageDimensions(prev => ({
                                             ...prev,
                                             [`page2_${pageNumber}`]: { width: canvas.clientWidth, height: canvas.clientHeight }
                                           }))
