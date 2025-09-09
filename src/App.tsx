@@ -644,7 +644,7 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
           const url = URL.createObjectURL(blob)
           const link = document.createElement('a')
           link.href = url
-          link.download = `${templateName}.zip`
+          link.download = `${templateName}-probability.zip`
           document.body.appendChild(link)
           link.click()
           document.body.removeChild(link)
