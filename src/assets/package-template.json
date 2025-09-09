@@ -1,0 +1,9 @@
+{
+  "name": "{template name}",
+  "version": "0.0.0",
+  "description": "Exported Cardcutter game",
+  "scripts": {
+    "build": "echo \"Bundling last commit...\" && mkdir -p dist && git archive -o dist/mod.zip HEAD"
+  },
+  "main": "probability.json"
+}

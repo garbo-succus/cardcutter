@@ -3,6 +3,8 @@ import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { useAppStore } from './store'
+import { zip } from 'fflate'
+import packageTemplate from './assets/package-template.json'
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -515,6 +517,49 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
     })
   }, [columns, rows, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions])
 
+  const createAndDownloadZip = useCallback(async (exportedFiles: Array<{ filename: string, blob: Blob }>, templateName: string) => {
+    return new Promise<void>((resolve, reject) => {
+      const zipFiles: Record<string, Uint8Array> = {}
+      
+      // Create package.json from template with template name substitution
+      const packageJson = JSON.stringify(packageTemplate, null, 2).replace('{template name}', templateName)
+      zipFiles['package.json'] = new TextEncoder().encode(packageJson)
+      
+      // Add probability.json in root  
+      zipFiles['probability.json'] = new TextEncoder().encode('{}')
+      
+      // Convert all image blobs to Uint8Array and add to template folder
+      const promises = exportedFiles.map(async (file) => {
+        const arrayBuffer = await file.blob.arrayBuffer()
+        const uint8Array = new Uint8Array(arrayBuffer)
+        zipFiles[`${templateName}/${file.filename}`] = uint8Array
+      })
+      
+      Promise.all(promises).then(() => {
+        // Create zip file
+        zip(zipFiles, (err, data) => {
+          if (err) {
+            reject(err)
+            return
+          }
+          
+          // Create download
+          const blob = new Blob([data], { type: 'application/zip' })
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = `${templateName}.zip`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+          
+          resolve()
+        })
+      }).catch(reject)
+    })
+  }, [])
+
   const exportAllCards = useCallback(async () => {
     if (!file1 && !file2) return
 
@@ -590,6 +635,9 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
       
       console.log('Exported files:', exportedFiles.map(f => f.filename))
       console.log('File objects:', exportedFiles)
+      
+      // Create zip file with folder structure
+      await createAndDownloadZip(exportedFiles, templateName)
       
     } catch (error) {
       console.error('Export failed:', error)
