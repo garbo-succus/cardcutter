@@ -285,24 +285,79 @@ function App() {
             </label>
           </>
         )}
-        <label>
-          Columns:
-          <input
-            type="number"
-            value={columns}
-            onChange={(e) => update('columns', Number(e.target.value))}
-            style={{ marginLeft: '0.5em', width: '60px' }}
-          />
-        </label>
-        <label>
-          Rows:
-          <input
-            type="number"
-            value={rows}
-            onChange={(e) => update('rows', Number(e.target.value))}
-            style={{ marginLeft: '0.5em', width: '60px' }}
-          />
-        </label>
+        <div style={{ marginBottom: '1em', border: '1px solid #ccc', padding: '1em', borderRadius: '4px' }}>
+          <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>Grid Layout</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '100px' }}>
+                Columns:
+              </label>
+              <input
+                type="number"
+                value={columns}
+                onChange={(e) => update('columns', Number(e.target.value))}
+                style={{ width: '60px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '100px' }}>
+                Rows:
+              </label>
+              <input
+                type="number"
+                value={rows}
+                onChange={(e) => update('rows', Number(e.target.value))}
+                style={{ width: '60px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '100px' }}>
+                Column Spacing:
+              </label>
+              <input
+                type="number"
+                value={columnSpacing}
+                onChange={(e) => setColumnSpacing(Number(e.target.value))}
+                style={{ width: '60px', marginRight: '4px' }}
+                step="0.1"
+                min="0"
+              />
+              <span style={{ marginRight: '8px' }}>mm</span>
+              <input
+                type="number"
+                value={Math.round((columnSpacing / 25.4) * 100) / 100}
+                onChange={(e) => setColumnSpacing(Number(e.target.value) * 25.4)}
+                style={{ width: '60px', marginRight: '4px' }}
+                step="0.01"
+                min="0"
+              />
+              <span>in</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '100px' }}>
+                Row Spacing:
+              </label>
+              <input
+                type="number"
+                value={rowSpacing}
+                onChange={(e) => setRowSpacing(Number(e.target.value))}
+                style={{ width: '60px', marginRight: '4px' }}
+                step="0.1"
+                min="0"
+              />
+              <span style={{ marginRight: '8px' }}>mm</span>
+              <input
+                type="number"
+                value={Math.round((rowSpacing / 25.4) * 100) / 100}
+                onChange={(e) => setRowSpacing(Number(e.target.value) * 25.4)}
+                style={{ width: '60px', marginRight: '4px' }}
+                step="0.01"
+                min="0"
+              />
+              <span>in</span>
+            </div>
+          </div>
+        </div>
 
         <div style={{ marginBottom: '1em', border: '1px solid #ccc', padding: '1em', borderRadius: '4px' }}>
           <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>Page Margins</h3>
@@ -401,46 +456,6 @@ function App() {
             </div>
           </div>
         </div>
-        <label>
-          Column Spacing (mm):
-          <input
-            type="number"
-            value={columnSpacing}
-            onChange={(e) => setColumnSpacing(Number(e.target.value))}
-            style={{ marginLeft: '0.5em', width: '60px' }}
-            step="0.1"
-            min="0"
-          />
-          (inches)
-          <input
-            type="number"
-            value={Math.round((columnSpacing / 25.4) * 100) / 100}
-            onChange={(e) => setColumnSpacing(Number(e.target.value) * 25.4)}
-            style={{ marginLeft: '0.25em', width: '60px' }}
-            step="0.01"
-            min="0"
-          />
-        </label>
-        <label>
-          Row Spacing (mm):
-          <input
-            type="number"
-            value={rowSpacing}
-            onChange={(e) => setRowSpacing(Number(e.target.value))}
-            style={{ marginLeft: '0.5em', width: '60px' }}
-            step="0.1"
-            min="0"
-          />
-          (inches)
-          <input
-            type="number"
-            value={Math.round((rowSpacing / 25.4) * 100) / 100}
-            onChange={(e) => setRowSpacing(Number(e.target.value) * 25.4)}
-            style={{ marginLeft: '0.25em', width: '60px' }}
-            step="0.01"
-            min="0"
-          />
-        </label>
         <label>
           Rotation:
           <select
