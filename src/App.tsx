@@ -5,6 +5,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { useAppStore } from './store'
 import { zip } from 'fflate'
 import packageTemplate from './assets/package-template.json'
+import { generateProbabilityJson } from './assets/probability-template'
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -517,7 +518,7 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
     })
   }, [columns, rows, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions])
 
-  const createAndDownloadZip = useCallback(async (exportedFiles: Array<{ filename: string, blob: Blob }>, templateName: string) => {
+  const createAndDownloadZip = useCallback(async (exportedFiles: Array<{ filename: string, blob: Blob }>, templateName: string, totalCards: number, startingCardNumber: number) => {
     return new Promise<void>((resolve, reject) => {
       const zipFiles: Record<string, Uint8Array> = {}
       
@@ -525,8 +526,47 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
       const packageJson = JSON.stringify(packageTemplate, null, 2).replace('{template name}', templateName)
       zipFiles['package.json'] = new TextEncoder().encode(packageJson)
       
-      // Add probability.json in root  
-      zipFiles['probability.json'] = new TextEncoder().encode('{}')
+      // Calculate card size from current settings
+      const calculateCardSize = () => {
+        if (Object.keys(pageDimensions).length === 0) return [63, 88, 0.1] as [number, number, number]; // Standard card size fallback
+        
+        const firstPageKey = Object.keys(pageDimensions)[0]
+        const pageWidth = pageDimensions[firstPageKey].width
+        const pageHeight = pageDimensions[firstPageKey].height
+        
+        const mmToPixels = (mm: number) => mm * (72 / 25.4)
+        const pixelsToMm = (pixels: number) => pixels / (72 / 25.4)
+        
+        const marginLeftPx = mmToPixels(marginLeft)
+        const marginRightPx = mmToPixels(marginRight)
+        const marginTopPx = mmToPixels(marginTop)
+        const marginBottomPx = mmToPixels(marginBottom)
+        const columnSpacingPx = mmToPixels(columnSpacing)
+        const rowSpacingPx = mmToPixels(rowSpacing)
+        
+        const totalColumnSpacing = columnSpacingPx * (columns - 1)
+        const totalRowSpacing = rowSpacingPx * (rows - 1)
+        
+        const availableWidth = pageWidth - marginLeftPx - marginRightPx - totalColumnSpacing
+        const availableHeight = pageHeight - marginTopPx - marginBottomPx - totalRowSpacing
+        const cellWidth = availableWidth / columns
+        const cellHeight = availableHeight / rows
+        
+        const cardWidthMm = pixelsToMm(cellWidth)
+        const cardHeightMm = pixelsToMm(cellHeight)
+        
+        return [
+          Math.round(cardWidthMm * 10) / 10,
+          Math.round(cardHeightMm * 10) / 10, 
+          0.1 // thickness in mm
+        ] as [number, number, number]
+      }
+      
+      const cardSize = calculateCardSize()
+      
+      // Generate probability.json
+      const probabilityJson = generateProbabilityJson(templateName, totalCards, startingCardNumber, cardSize)
+      zipFiles['probability.json'] = new TextEncoder().encode(probabilityJson)
       
       // Convert all image blobs to Uint8Array and add to template folder
       const promises = exportedFiles.map(async (file) => {
@@ -558,7 +598,7 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
         })
       }).catch(reject)
     })
-  }, [])
+  }, [columns, rows, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, pageDimensions])
 
   const exportAllCards = useCallback(async () => {
     if (!file1 && !file2) return
@@ -637,7 +677,7 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
       console.log('File objects:', exportedFiles)
       
       // Create zip file with folder structure
-      await createAndDownloadZip(exportedFiles, templateName)
+      await createAndDownloadZip(exportedFiles, templateName, totalCards, startingCardNumber)
       
     } catch (error) {
       console.error('Export failed:', error)
