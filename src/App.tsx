@@ -165,9 +165,11 @@ function CardPreview({ cardNumber, mode, file1, file2, columns, rows, startPage,
     const cellHeight = availableHeight / rows
 
     let cardX: number, cardY: number
-    if (isBack && mode === 'single') {
+    if (isBack) {
+      // For back cards (both single and separate PDF modes): use mirrored position to match grid overlay
       cardX = marginLeftPx + (columns - col - 1) * (cellWidth + columnSpacingPx)
     } else {
+      // For front cards: normal left to right order
       cardX = marginLeftPx + col * (cellWidth + columnSpacingPx)
     }
     cardY = marginTopPx + row * (cellHeight + rowSpacingPx)
@@ -779,7 +781,6 @@ function App() {
                   onChange={(e) => update('marginLeft', Number(e.target.value))}
                   style={{ width: '60px', marginRight: '4px' }}
                   step="0.1"
-                  min="0"
                 />
                 <span style={{ marginRight: '8px' }}>mm</span>
                 <input
@@ -788,7 +789,6 @@ function App() {
                   onChange={(e) => update('marginLeft', Number(e.target.value) * 25.4)}
                   style={{ width: '60px', marginRight: '4px' }}
                   step="0.01"
-                  min="0"
                 />
                 <span>in</span>
               </div>
@@ -802,7 +802,6 @@ function App() {
                   onChange={(e) => update('marginRight', Number(e.target.value))}
                   style={{ width: '60px', marginRight: '4px' }}
                   step="0.1"
-                  min="0"
                 />
                 <span style={{ marginRight: '8px' }}>mm</span>
                 <input
@@ -811,7 +810,6 @@ function App() {
                   onChange={(e) => update('marginRight', Number(e.target.value) * 25.4)}
                   style={{ width: '60px', marginRight: '4px' }}
                   step="0.01"
-                  min="0"
                 />
                 <span>in</span>
               </div>
@@ -825,7 +823,6 @@ function App() {
                   onChange={(e) => update('marginTop', Number(e.target.value))}
                   style={{ width: '60px', marginRight: '4px' }}
                   step="0.1"
-                  min="0"
                 />
                 <span style={{ marginRight: '8px' }}>mm</span>
                 <input
@@ -834,7 +831,6 @@ function App() {
                   onChange={(e) => update('marginTop', Number(e.target.value) * 25.4)}
                   style={{ width: '60px', marginRight: '4px' }}
                   step="0.01"
-                  min="0"
                 />
                 <span>in</span>
               </div>
@@ -848,7 +844,6 @@ function App() {
                   onChange={(e) => update('marginBottom', Number(e.target.value))}
                   style={{ width: '60px', marginRight: '4px' }}
                   step="0.1"
-                  min="0"
                 />
                 <span style={{ marginRight: '8px' }}>mm</span>
                 <input
@@ -857,7 +852,6 @@ function App() {
                   onChange={(e) => update('marginBottom', Number(e.target.value) * 25.4)}
                   style={{ width: '60px', marginRight: '4px' }}
                   step="0.01"
-                  min="0"
                 />
                 <span>in</span>
               </div>
