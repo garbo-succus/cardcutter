@@ -233,298 +233,301 @@ function App() {
       <h1>Cardcutter</h1>
       <p>Turn PDF card sheets into individual cards for <a href="https://probability.nz" target="_blank" rel="noopener noreferrer">Probability</a></p>
       
-      <div style={{ marginBottom: '1em', border: '1px solid #ccc', padding: '1em', borderRadius: '4px' }}>
-        <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>PDF Setup</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5em' }}>
-              <input
-                type="radio"
-                value="single"
-                checked={mode === 'single'}
-                onChange={(e) => update('mode', 'single')}
-                style={{ marginRight: '0.5em' }}
-              />
-              Front and back on 1 pdf
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center' }}>
-              <input
-                type="radio"
-                value="separate"
-                checked={mode === 'separate'}
-                onChange={(e) => update('mode', 'separate')}
-                style={{ marginRight: '0.5em' }}
-              />
-              Front and back on separate PDFs
-            </label>
-          </div>
-          
-          <div style={{ marginTop: '0.5em' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5em' }}>
-              <label style={{ display: 'inline-block', width: '120px' }}>
-                {mode === 'single' ? 'Front/Back PDF:' : 'Front PDF:'}
+      <div style={{ display: 'flex', gap: '1em', marginBottom: '1em', flexWrap: 'wrap' }}>
+        <div style={{ border: '1px solid #ccc', padding: '1em', borderRadius: '4px', flex: '1', minWidth: '300px' }}>
+          <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>PDF Setup</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5em' }}>
+                <input
+                  type="radio"
+                  value="single"
+                  checked={mode === 'single'}
+                  onChange={(e) => update('mode', 'single')}
+                  style={{ marginRight: '0.5em' }}
+                />
+                Front and back on 1 pdf
               </label>
-              <input 
-                type="file" 
-                accept=".pdf" 
-                onChange={onFile1Change} 
-                style={{ flex: 1 }}
-              />
+              <label style={{ display: 'flex', alignItems: 'center' }}>
+                <input
+                  type="radio"
+                  value="separate"
+                  checked={mode === 'separate'}
+                  onChange={(e) => update('mode', 'separate')}
+                  style={{ marginRight: '0.5em' }}
+                />
+                Front and back on separate PDFs
+              </label>
             </div>
-            {mode === 'separate' && (
-              <div style={{ display: 'flex', alignItems: 'center' }}>
+            
+            <div style={{ marginTop: '0.5em' }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5em' }}>
                 <label style={{ display: 'inline-block', width: '120px' }}>
-                  Back PDF:
+                  {mode === 'single' ? 'Front/Back PDF:' : 'Front PDF:'}
                 </label>
                 <input 
                   type="file" 
                   accept=".pdf" 
-                  onChange={onFile2Change} 
+                  onChange={onFile1Change} 
                   style={{ flex: 1 }}
                 />
               </div>
+              {mode === 'separate' && (
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <label style={{ display: 'inline-block', width: '120px' }}>
+                    Back PDF:
+                  </label>
+                  <input 
+                    type="file" 
+                    accept=".pdf" 
+                    onChange={onFile2Change} 
+                    style={{ flex: 1 }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ border: '1px solid #ccc', padding: '1em', borderRadius: '4px', flex: '1', minWidth: '250px' }}>
+          <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>Sheet Options</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
+            {(file1 || file2) && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <label style={{ display: 'inline-block', width: '100px' }}>
+                    Start Page:
+                  </label>
+                  <input
+                    type="number"
+                    value={startPage}
+                    onChange={(e) => update('startPage', Math.max(1, Math.min(Number(e.target.value), Math.max(numPages1, numPages2))))}
+                    style={{ width: '60px' }}
+                    min="1"
+                    max={Math.max(numPages1, numPages2)}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <label style={{ display: 'inline-block', width: '100px' }}>
+                    Finish Page:
+                  </label>
+                  <input
+                    type="number"
+                    value={finishPage || Math.max(numPages1, numPages2)}
+                    onChange={(e) => {
+                      const maxPages = Math.max(numPages1, numPages2)
+                      const value = Number(e.target.value)
+                      update('finishPage', value === maxPages ? null : Math.max(startPage, Math.min(value, maxPages)))
+                    }}
+                    style={{ width: '60px' }}
+                    min={startPage}
+                    max={Math.max(numPages1, numPages2)}
+                  />
+                </div>
+              </>
             )}
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '100px' }}>
+                Rotation:
+              </label>
+              <select
+                disabled
+                value={rotation}
+                onChange={(e) => update('rotation', Number(e.target.value))}
+                style={{ width: '80px' }}
+              >
+                <option value={0}>0°</option>
+                <option value={90}>90°</option>
+                <option value={180}>180°</option>
+                <option value={270}>270°</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={{ display: 'inline-block', width: '100px' }}>
+                Outline Color:
+              </label>
+              <select
+                value={outlineColor}
+                onChange={(e) => update('outlineColor', e.target.value)}
+                style={{ width: '80px' }}
+              >
+                <option value="red">Red</option>
+                <option value="blue">Blue</option>
+                <option value="green">Green</option>
+              </select>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div style={{ marginBottom: '1em', border: '1px solid #ccc', padding: '1em', borderRadius: '4px' }}>
-        <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>Sheet Options</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
-          {(file1 || file2) && (
-            <>
+        <div style={{ border: '1px solid #ccc', padding: '1em', borderRadius: '4px', flex: '1', minWidth: '250px' }}>
+            <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>Card Layout</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <label style={{ display: 'inline-block', width: '100px' }}>
-                  Start Page:
+                  Columns:
                 </label>
                 <input
                   type="number"
-                  value={startPage}
-                  onChange={(e) => update('startPage', Math.max(1, Math.min(Number(e.target.value), Math.max(numPages1, numPages2))))}
+                  value={columns}
+                  onChange={(e) => update('columns', Number(e.target.value))}
                   style={{ width: '60px' }}
-                  min="1"
-                  max={Math.max(numPages1, numPages2)}
                 />
               </div>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <label style={{ display: 'inline-block', width: '100px' }}>
-                  Finish Page:
+                  Rows:
                 </label>
                 <input
                   type="number"
-                  value={finishPage || Math.max(numPages1, numPages2)}
-                  onChange={(e) => {
-                    const maxPages = Math.max(numPages1, numPages2)
-                    const value = Number(e.target.value)
-                    update('finishPage', value === maxPages ? null : Math.max(startPage, Math.min(value, maxPages)))
-                  }}
+                  value={rows}
+                  onChange={(e) => update('rows', Number(e.target.value))}
                   style={{ width: '60px' }}
-                  min={startPage}
-                  max={Math.max(numPages1, numPages2)}
                 />
               </div>
-            </>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <label style={{ display: 'inline-block', width: '100px' }}>
-              Rotation:
-            </label>
-            <select
-              value={rotation}
-              onChange={(e) => update('rotation', Number(e.target.value))}
-              style={{ width: '80px' }}
-            >
-              <option value={0}>0°</option>
-              <option value={90}>90°</option>
-              <option value={180}>180°</option>
-              <option value={270}>270°</option>
-            </select>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <label style={{ display: 'inline-block', width: '100px' }}>
+                  Col Spacing:
+                </label>
+                <input
+                  type="number"
+                  value={columnSpacing}
+                  onChange={(e) => update('columnSpacing', Number(e.target.value))}
+                  style={{ width: '60px', marginRight: '4px' }}
+                  step="0.1"
+                  min="0"
+                />
+                <span style={{ marginRight: '8px' }}>mm</span>
+                <input
+                  type="number"
+                  value={Math.round((columnSpacing / 25.4) * 100) / 100}
+                  onChange={(e) => update('columnSpacing', Number(e.target.value) * 25.4)}
+                  style={{ width: '60px', marginRight: '4px' }}
+                  step="0.01"
+                  min="0"
+                />
+                <span>in</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <label style={{ display: 'inline-block', width: '100px' }}>
+                  Row Spacing:
+                </label>
+                <input
+                  type="number"
+                  value={rowSpacing}
+                  onChange={(e) => update('rowSpacing', Number(e.target.value))}
+                  style={{ width: '60px', marginRight: '4px' }}
+                  step="0.1"
+                  min="0"
+                />
+                <span style={{ marginRight: '8px' }}>mm</span>
+                <input
+                  type="number"
+                  value={Math.round((rowSpacing / 25.4) * 100) / 100}
+                  onChange={(e) => update('rowSpacing', Number(e.target.value) * 25.4)}
+                  style={{ width: '60px', marginRight: '4px' }}
+                  step="0.01"
+                  min="0"
+                />
+                <span>in</span>
+              </div>
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <label style={{ display: 'inline-block', width: '100px' }}>
-              Outline Color:
-            </label>
-            <select
-              value={outlineColor}
-              onChange={(e) => update('outlineColor', e.target.value)}
-              style={{ width: '80px' }}
-            >
-              <option value="red">Red</option>
-              <option value="blue">Blue</option>
-              <option value="green">Green</option>
-            </select>
-          </div>
-        </div>
-      </div>
 
-      <div style={{ marginBottom: '1em', border: '1px solid #ccc', padding: '1em', borderRadius: '4px' }}>
-          <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>Card Layout</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '100px' }}>
-                Columns:
-              </label>
-              <input
-                type="number"
-                value={columns}
-                onChange={(e) => update('columns', Number(e.target.value))}
-                style={{ width: '60px' }}
-              />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '100px' }}>
-                Rows:
-              </label>
-              <input
-                type="number"
-                value={rows}
-                onChange={(e) => update('rows', Number(e.target.value))}
-                style={{ width: '60px' }}
-              />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '100px' }}>
-                Col Spacing:
-              </label>
-              <input
-                type="number"
-                value={columnSpacing}
-                onChange={(e) => update('columnSpacing', Number(e.target.value))}
-                style={{ width: '60px', marginRight: '4px' }}
-                step="0.1"
-                min="0"
-              />
-              <span style={{ marginRight: '8px' }}>mm</span>
-              <input
-                type="number"
-                value={Math.round((columnSpacing / 25.4) * 100) / 100}
-                onChange={(e) => update('columnSpacing', Number(e.target.value) * 25.4)}
-                style={{ width: '60px', marginRight: '4px' }}
-                step="0.01"
-                min="0"
-              />
-              <span>in</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '100px' }}>
-                Row Spacing:
-              </label>
-              <input
-                type="number"
-                value={rowSpacing}
-                onChange={(e) => update('rowSpacing', Number(e.target.value))}
-                style={{ width: '60px', marginRight: '4px' }}
-                step="0.1"
-                min="0"
-              />
-              <span style={{ marginRight: '8px' }}>mm</span>
-              <input
-                type="number"
-                value={Math.round((rowSpacing / 25.4) * 100) / 100}
-                onChange={(e) => update('rowSpacing', Number(e.target.value) * 25.4)}
-                style={{ width: '60px', marginRight: '4px' }}
-                step="0.01"
-                min="0"
-              />
-              <span>in</span>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '1em', border: '1px solid #ccc', padding: '1em', borderRadius: '4px' }}>
-          <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>Page Margins</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '60px' }}>
-                Left:
-              </label>
-              <input
-                type="number"
-                value={marginLeft}
-                onChange={(e) => update('marginLeft', Number(e.target.value))}
-                style={{ width: '60px', marginRight: '4px' }}
-                step="0.1"
-                min="0"
-              />
-              <span style={{ marginRight: '8px' }}>mm</span>
-              <input
-                type="number"
-                value={Math.round((marginLeft / 25.4) * 100) / 100}
-                onChange={(e) => update('marginLeft', Number(e.target.value) * 25.4)}
-                style={{ width: '60px', marginRight: '4px' }}
-                step="0.01"
-                min="0"
-              />
-              <span>in</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '60px' }}>
-                Right:
-              </label>
-              <input
-                type="number"
-                value={marginRight}
-                onChange={(e) => update('marginRight', Number(e.target.value))}
-                style={{ width: '60px', marginRight: '4px' }}
-                step="0.1"
-                min="0"
-              />
-              <span style={{ marginRight: '8px' }}>mm</span>
-              <input
-                type="number"
-                value={Math.round((marginRight / 25.4) * 100) / 100}
-                onChange={(e) => update('marginRight', Number(e.target.value) * 25.4)}
-                style={{ width: '60px', marginRight: '4px' }}
-                step="0.01"
-                min="0"
-              />
-              <span>in</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '60px' }}>
-                Top:
-              </label>
-              <input
-                type="number"
-                value={marginTop}
-                onChange={(e) => update('marginTop', Number(e.target.value))}
-                style={{ width: '60px', marginRight: '4px' }}
-                step="0.1"
-                min="0"
-              />
-              <span style={{ marginRight: '8px' }}>mm</span>
-              <input
-                type="number"
-                value={Math.round((marginTop / 25.4) * 100) / 100}
-                onChange={(e) => update('marginTop', Number(e.target.value) * 25.4)}
-                style={{ width: '60px', marginRight: '4px' }}
-                step="0.01"
-                min="0"
-              />
-              <span>in</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'inline-block', width: '60px' }}>
-                Bottom:
-              </label>
-              <input
-                type="number"
-                value={marginBottom}
-                onChange={(e) => update('marginBottom', Number(e.target.value))}
-                style={{ width: '60px', marginRight: '4px' }}
-                step="0.1"
-                min="0"
-              />
-              <span style={{ marginRight: '8px' }}>mm</span>
-              <input
-                type="number"
-                value={Math.round((marginBottom / 25.4) * 100) / 100}
-                onChange={(e) => update('marginBottom', Number(e.target.value) * 25.4)}
-                style={{ width: '60px', marginRight: '4px' }}
-                step="0.01"
-                min="0"
-              />
-              <span>in</span>
+          <div style={{ border: '1px solid #ccc', padding: '1em', borderRadius: '4px', flex: '1', minWidth: '250px' }}>
+            <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1em' }}>Page Margins</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <label style={{ display: 'inline-block', width: '60px' }}>
+                  Left:
+                </label>
+                <input
+                  type="number"
+                  value={marginLeft}
+                  onChange={(e) => update('marginLeft', Number(e.target.value))}
+                  style={{ width: '60px', marginRight: '4px' }}
+                  step="0.1"
+                  min="0"
+                />
+                <span style={{ marginRight: '8px' }}>mm</span>
+                <input
+                  type="number"
+                  value={Math.round((marginLeft / 25.4) * 100) / 100}
+                  onChange={(e) => update('marginLeft', Number(e.target.value) * 25.4)}
+                  style={{ width: '60px', marginRight: '4px' }}
+                  step="0.01"
+                  min="0"
+                />
+                <span>in</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <label style={{ display: 'inline-block', width: '60px' }}>
+                  Right:
+                </label>
+                <input
+                  type="number"
+                  value={marginRight}
+                  onChange={(e) => update('marginRight', Number(e.target.value))}
+                  style={{ width: '60px', marginRight: '4px' }}
+                  step="0.1"
+                  min="0"
+                />
+                <span style={{ marginRight: '8px' }}>mm</span>
+                <input
+                  type="number"
+                  value={Math.round((marginRight / 25.4) * 100) / 100}
+                  onChange={(e) => update('marginRight', Number(e.target.value) * 25.4)}
+                  style={{ width: '60px', marginRight: '4px' }}
+                  step="0.01"
+                  min="0"
+                />
+                <span>in</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <label style={{ display: 'inline-block', width: '60px' }}>
+                  Top:
+                </label>
+                <input
+                  type="number"
+                  value={marginTop}
+                  onChange={(e) => update('marginTop', Number(e.target.value))}
+                  style={{ width: '60px', marginRight: '4px' }}
+                  step="0.1"
+                  min="0"
+                />
+                <span style={{ marginRight: '8px' }}>mm</span>
+                <input
+                  type="number"
+                  value={Math.round((marginTop / 25.4) * 100) / 100}
+                  onChange={(e) => update('marginTop', Number(e.target.value) * 25.4)}
+                  style={{ width: '60px', marginRight: '4px' }}
+                  step="0.01"
+                  min="0"
+                />
+                <span>in</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <label style={{ display: 'inline-block', width: '60px' }}>
+                  Bottom:
+                </label>
+                <input
+                  type="number"
+                  value={marginBottom}
+                  onChange={(e) => update('marginBottom', Number(e.target.value))}
+                  style={{ width: '60px', marginRight: '4px' }}
+                  step="0.1"
+                  min="0"
+                />
+                <span style={{ marginRight: '8px' }}>mm</span>
+                <input
+                  type="number"
+                  value={Math.round((marginBottom / 25.4) * 100) / 100}
+                  onChange={(e) => update('marginBottom', Number(e.target.value) * 25.4)}
+                  style={{ width: '60px', marginRight: '4px' }}
+                  step="0.01"
+                  min="0"
+                />
+                <span>in</span>
+              </div>
             </div>
           </div>
         </div>
