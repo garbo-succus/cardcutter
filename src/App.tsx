@@ -7,6 +7,7 @@ import { zip } from 'fflate'
 import packageTemplate from './assets/package-template.json'
 import { generateProbabilityJson } from './assets/probability-template'
 import GitHubBanner from './GitHubBanner'
+import { CANVAS_EXPORT_SUPPORT_AVIF, CANVAS_EXPORT_SUPPORT_WEBP } from './helpers'
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -600,28 +601,42 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
         0, 0, cellWidth, cellHeight
       )
 
-      canvas.toBlob(async (pngBlob) => {
-        if (pngBlob) {
-          const side = isBack ? 'back' : 'front'
-          const actualCardNumber = cardNumber + startingCardNumber - 1
-          const paddedCardNumber = actualCardNumber.toString().padStart(3, '0')
-          const filename = `${templateName}-${paddedCardNumber}-${side}.${imageFormat}`
-          
-          if (imageFormat === 'avif') {
-            try {
-              const avifBlob = await convertPngToAvif(pngBlob)
-              resolve({ filename, blob: avifBlob })
-            } catch (error) {
-              console.error('AVIF conversion failed:', error)
-              resolve(null)
+      if (imageFormat === 'png') {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const side = isBack ? 'back' : 'front'
+            const actualCardNumber = cardNumber + startingCardNumber - 1
+            const paddedCardNumber = actualCardNumber.toString().padStart(3, '0')
+            const filename = `${templateName}-${paddedCardNumber}-${side}.png`
+            resolve({ filename, blob })
+          } else {
+            resolve(null)
+          }
+        }, 'image/png')
+      } else {
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            const side = isBack ? 'back' : 'front'
+            const actualCardNumber = cardNumber + startingCardNumber - 1
+            const paddedCardNumber = actualCardNumber.toString().padStart(3, '0')
+            const filename = `${templateName}-${paddedCardNumber}-${side}.${imageFormat}`
+            
+            if (imageFormat === 'avif') {
+              try {
+                const avifBlob = await convertPngToAvif(blob)
+                resolve({ filename, blob: avifBlob })
+              } catch (error) {
+                console.error('AVIF conversion failed:', error)
+                resolve(null)
+              }
+            } else {
+              resolve({ filename, blob })
             }
           } else {
-            resolve({ filename, blob: pngBlob })
+            resolve(null)
           }
-        } else {
-          resolve(null)
-        }
-      }, 'image/png')
+        }, imageFormat === 'jpeg' ? 'image/jpeg' : `image/${imageFormat}`, imageFormat === 'jpeg' ? 0.8 : undefined)
+      }
     })
   }, [columns, rows, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions, renderPageToCache])
 
@@ -1382,7 +1397,9 @@ function App() {
                 }}
                 disabled={isExporting}
               >
-                <option value="avif">AVIF (recommended)</option>
+                <option value="avif" disabled={!CANVAS_EXPORT_SUPPORT_AVIF}>AVIF</option>
+                <option value="webp" disabled={!CANVAS_EXPORT_SUPPORT_WEBP}>WebP</option>
+                <option value="jpeg">JPEG</option>
                 <option value="png">PNG</option>
               </select>
             </div>

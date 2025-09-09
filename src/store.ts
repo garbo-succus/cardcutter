@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getDefaultImageFormat } from './helpers'
 
 interface AppState {
   mode: 'single' | 'separate'
@@ -77,7 +78,7 @@ export const useAppStore = create<AppState>((set) => ({
   previewCardNumber: 1,
   startingCardNumber: 1,
   cardThickness: 0.0003,
-  imageFormat: 'avif',
+  imageFormat: getDefaultImageFormat(),
 
   update: (key, value) => set({ [key]: value } as any),
   setMode: (mode) => set({ mode }),
