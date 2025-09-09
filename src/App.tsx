@@ -494,6 +494,52 @@ interface CardExportProps {
 
 function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, numPages1, numPages2, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions, startingCardNumber, cardThickness, imageFormat, isExporting, setIsExporting }: CardExportProps) {
   const [exportProgress, setExportProgress] = useState({ completed: 0, total: 0 })
+  const pageRenderCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map())
+
+  const renderPageToCache = useCallback(async (targetFile: File, pdfPageNumber: number, pageKey: string): Promise<HTMLCanvasElement | null> => {
+    const cacheKey = `${targetFile.name}_${pdfPageNumber}_${dpi}`
+    
+    // Check if already cached
+    if (pageRenderCacheRef.current.has(cacheKey)) {
+      return pageRenderCacheRef.current.get(cacheKey)!
+    }
+
+    return new Promise<HTMLCanvasElement | null>((resolve) => {
+      const tempCanvas = document.createElement('canvas')
+      const tempCtx = tempCanvas.getContext('2d')
+      if (!tempCtx) {
+        resolve(null)
+        return
+      }
+
+      const fileReader = new FileReader()
+      fileReader.onload = function(e) {
+        const typedArray = new Uint8Array(e.target!.result as ArrayBuffer)
+        const loadingTask = pdfjs.getDocument({ data: typedArray })
+        loadingTask.promise.then((pdf) => {
+          pdf.getPage(pdfPageNumber).then((page) => {
+            const scale = dpi / 72
+            const viewport = page.getViewport({ scale })
+
+            tempCanvas.width = viewport.width
+            tempCanvas.height = viewport.height
+
+            const renderContext = {
+              canvasContext: tempCtx,
+              viewport: viewport,
+            }
+
+            page.render(renderContext).promise.then(() => {
+              // Cache the rendered canvas
+              pageRenderCacheRef.current.set(cacheKey, tempCanvas)
+              resolve(tempCanvas)
+            }).catch(() => resolve(null))
+          }).catch(() => resolve(null))
+        }).catch(() => resolve(null))
+      }
+      fileReader.readAsArrayBuffer(targetFile)
+    })
+  }, [dpi])
 
   const generateCardImage = useCallback(async (cardNumber: number, isBack: boolean, targetFile: File, pdfPageNumber: number, pageKey: string): Promise<{ filename: string, blob: Blob } | null> => {
     const dimensions = pageDimensions[pageKey]
@@ -532,6 +578,10 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
     }
     cardY = marginTopPx + row * (cellHeight + rowSpacingPx)
 
+    // Get or render the page to cache
+    const renderedCanvas = await renderPageToCache(targetFile, pdfPageNumber, pageKey)
+    if (!renderedCanvas) return null
+
     return new Promise<{ filename: string, blob: Blob } | null>((resolve) => {
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
@@ -543,66 +593,37 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
       canvas.width = Math.round(cellWidth)
       canvas.height = Math.round(cellHeight)
 
-      const tempCanvas = document.createElement('canvas')
-      const tempCtx = tempCanvas.getContext('2d')
-      if (!tempCtx) {
-        resolve(null)
-        return
-      }
+      // Extract the card from the cached rendered page
+      ctx.drawImage(
+        renderedCanvas,
+        cardX, cardY, cellWidth, cellHeight,
+        0, 0, cellWidth, cellHeight
+      )
 
-      const fileReader = new FileReader()
-      fileReader.onload = function(e) {
-        const typedArray = new Uint8Array(e.target!.result as ArrayBuffer)
-        const loadingTask = pdfjs.getDocument({ data: typedArray })
-        loadingTask.promise.then((pdf) => {
-          pdf.getPage(pdfPageNumber).then((page) => {
-            const scale = dpi / 72
-            const viewport = page.getViewport({ scale })
-
-            tempCanvas.width = viewport.width
-            tempCanvas.height = viewport.height
-
-            const renderContext = {
-              canvasContext: tempCtx,
-              viewport: viewport,
+      canvas.toBlob(async (pngBlob) => {
+        if (pngBlob) {
+          const side = isBack ? 'back' : 'front'
+          const actualCardNumber = cardNumber + startingCardNumber - 1
+          const paddedCardNumber = actualCardNumber.toString().padStart(3, '0')
+          const filename = `${templateName}-${paddedCardNumber}-${side}.${imageFormat}`
+          
+          if (imageFormat === 'avif') {
+            try {
+              const avifBlob = await convertPngToAvif(pngBlob)
+              resolve({ filename, blob: avifBlob })
+            } catch (error) {
+              console.error('AVIF conversion failed:', error)
+              resolve(null)
             }
-
-            page.render(renderContext).promise.then(async () => {
-              ctx.drawImage(
-                tempCanvas,
-                cardX, cardY, cellWidth, cellHeight,
-                0, 0, cellWidth, cellHeight
-              )
-
-              canvas.toBlob(async (pngBlob) => {
-                if (pngBlob) {
-                  const side = isBack ? 'back' : 'front'
-                  const actualCardNumber = cardNumber + startingCardNumber - 1
-                  const paddedCardNumber = actualCardNumber.toString().padStart(3, '0')
-                  const filename = `${templateName}-${paddedCardNumber}-${side}.${imageFormat}`
-                  
-                  if (imageFormat === 'avif') {
-                    try {
-                      const avifBlob = await convertPngToAvif(pngBlob)
-                      resolve({ filename, blob: avifBlob })
-                    } catch (error) {
-                      console.error('AVIF conversion failed:', error)
-                      resolve(null)
-                    }
-                  } else {
-                    resolve({ filename, blob: pngBlob })
-                  }
-                } else {
-                  resolve(null)
-                }
-              }, 'image/png')
-            }).catch(() => resolve(null))
-          }).catch(() => resolve(null))
-        }).catch(() => resolve(null))
-      }
-      fileReader.readAsArrayBuffer(targetFile)
+          } else {
+            resolve({ filename, blob: pngBlob })
+          }
+        } else {
+          resolve(null)
+        }
+      }, 'image/png')
     })
-  }, [columns, rows, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions])
+  }, [columns, rows, marginLeft, marginRight, marginTop, marginBottom, columnSpacing, rowSpacing, dpi, templateName, pageDimensions, renderPageToCache])
 
   const createAndDownloadZip = useCallback(async (exportedFiles: Array<{ filename: string, blob: Blob }>, templateName: string, totalCards: number, startingCardNumber: number, cardThickness: number) => {
     return new Promise<void>((resolve, reject) => {
@@ -660,6 +681,9 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
     if (!file1 && !file2) return
 
     setIsExporting(true)
+    
+    // Clear the render cache at the start of export to avoid memory buildup
+    pageRenderCacheRef.current.clear()
     
     const effectiveFinishPage = finishPage || Math.max(numPages1, numPages2)
     const totalPages = effectiveFinishPage - startPage + 1
@@ -738,6 +762,8 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
     } catch (error) {
       console.error('Export failed:', error)
     } finally {
+      // Clear the render cache after export to free memory
+      pageRenderCacheRef.current.clear()
       setIsExporting(false)
     }
   }, [mode, file1, file2, startPage, finishPage, numPages1, numPages2, columns, rows, generateCardImage, startingCardNumber])
