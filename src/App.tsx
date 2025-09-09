@@ -814,9 +814,9 @@ function App() {
   const previewCardNumber = useAppStore((state) => state.previewCardNumber)
   const startingCardNumber = useAppStore((state) => state.startingCardNumber)
   const cardThickness = useAppStore((state) => state.cardThickness)
+  const imageFormat = useAppStore((state) => state.imageFormat)
   const update = useAppStore((state) => state.update)
   const [renderedPageDimensions, setRenderedPageDimensions] = useState<{[key: string]: {width: number, height: number}}>({})
-  const [imageFormat, setImageFormat] = useState('avif')
   const [isExporting, setIsExporting] = useState(false)
   
   const pageDimensions = useMemo(() => {
@@ -1326,7 +1326,7 @@ function App() {
               <span style={{ display: 'inline-block', width: '100px' }}>File format:</span>
               <select
                 value={imageFormat}
-                onChange={(e) => setImageFormat(e.target.value)}
+                onChange={(e) => update('imageFormat', e.target.value)}
                 style={{
                   padding: '0.5em',
                   border: '1px solid #ccc',
