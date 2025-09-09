@@ -805,20 +805,23 @@ function CardExport({ mode, file1, file2, columns, rows, startPage, finishPage, 
     }
   }, [mode, file1, file2, startPage, finishPage, numPages1, numPages2, columns, rows, generateCardImage, startingCardNumber])
 
+  const effectiveFinishPage = finishPage || Math.max(numPages1, numPages2)
+  const totalPages = effectiveFinishPage - startPage + 1
   const hasFiles = mode === 'single' ? file1 : (file1 && file2)
+  const hasEnoughPages = mode === 'single' ? totalPages >= 2 : totalPages >= 1
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
       <button 
         onClick={exportAllCards}
-        disabled={isExporting || !hasFiles}
+        disabled={isExporting || !hasFiles || !hasEnoughPages}
         style={{
           padding: '0.5em 1em',
-          backgroundColor: (isExporting || !hasFiles) ? '#ccc' : '#007bff',
+          backgroundColor: (isExporting || !hasFiles || !hasEnoughPages) ? '#ccc' : '#007bff',
           color: 'white',
           border: 'none',
           borderRadius: '4px',
-          cursor: (isExporting || !hasFiles) ? 'not-allowed' : 'pointer',
+          cursor: (isExporting || !hasFiles || !hasEnoughPages) ? 'not-allowed' : 'pointer',
           alignSelf: 'flex-start'
         }}
       >
@@ -1127,7 +1130,6 @@ function App() {
                 style={{ width: '60px' }}
                 min="1"
                 max={Math.max(numPages1, numPages2) || 1}
-                disabled
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1145,7 +1147,6 @@ function App() {
                 style={{ width: '60px' }}
                 min={startPage}
                 max={Math.max(numPages1, numPages2) || 1}
-                disabled
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1487,6 +1488,8 @@ function App() {
                     const dimensions = pageDimensions[pageKey]
                     const effectiveFinishPage = finishPage || numPages1
                     const isInRange = pageNumber >= startPage && pageNumber <= effectiveFinishPage
+                    
+                    if (!isInRange) return null
                     return (
                       <div key={pageKey} style={{ 
                         margin: '0 0 2em 0', 
@@ -1513,26 +1516,24 @@ function App() {
                         />
                         {dimensions && (
                           <>
-                            {isInRange && (
-                              <div 
-                                className="grid-overlay-container"
-                                style={{
-                                  position: 'absolute',
-                                  top: 0,
-                                  left: 0,
-                                  pointerEvents: 'none'
-                                }}
-                              >
-                                <GridOverlay 
-                                  pageWidth={dimensions.width} 
-                                  pageHeight={dimensions.height} 
-                                  isBackPage={(pageNumber - startPage + 1) % 2 === 0}
-                                  pageOffset={pageNumber - startPage}
-                                  mode={mode}
-                                  startingCardNumber={startingCardNumber}
-                                />
-                              </div>
-                            )}
+                            <div 
+                              className="grid-overlay-container"
+                              style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                pointerEvents: 'none'
+                              }}
+                            >
+                              <GridOverlay 
+                                pageWidth={dimensions.width} 
+                                pageHeight={dimensions.height} 
+                                isBackPage={(pageNumber - startPage + 1) % 2 === 0}
+                                pageOffset={pageNumber - startPage}
+                                mode={mode}
+                                startingCardNumber={startingCardNumber}
+                              />
+                            </div>
                             <div
                               style={{
                                 position: 'absolute',
@@ -1566,6 +1567,8 @@ function App() {
                       const effectiveFinishPage = finishPage || Math.max(numPages1, numPages2)
                       const isInRange = pageNumber >= startPage && pageNumber <= effectiveFinishPage
                       
+                      if (!isInRange) return null
+                      
                       return (
                         <div key={`page-pair-${pageNumber}`} style={{ 
                           margin: '0 0 2em 0', 
@@ -1595,26 +1598,24 @@ function App() {
                             />
                             {pageDimensions[`page1_${pageNumber}`] && (
                               <>
-                                {isInRange && (
-                                  <div 
-                                    className="grid-overlay-container"
-                                    style={{
-                                      position: 'absolute',
-                                      top: 0,
-                                      left: 0,
-                                      pointerEvents: 'none'
-                                    }}
-                                  >
-                                    <GridOverlay 
-                                      pageWidth={pageDimensions[`page1_${pageNumber}`].width} 
-                                      pageHeight={pageDimensions[`page1_${pageNumber}`].height} 
-                                      isBackPage={false}
-                                      pageOffset={pageNumber - startPage}
-                                      mode={mode}
-                                      startingCardNumber={startingCardNumber}
-                                    />
-                                  </div>
-                                )}
+                                <div 
+                                  className="grid-overlay-container"
+                                  style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    pointerEvents: 'none'
+                                  }}
+                                >
+                                  <GridOverlay 
+                                    pageWidth={pageDimensions[`page1_${pageNumber}`].width} 
+                                    pageHeight={pageDimensions[`page1_${pageNumber}`].height} 
+                                    isBackPage={false}
+                                    pageOffset={pageNumber - startPage}
+                                    mode={mode}
+                                    startingCardNumber={startingCardNumber}
+                                  />
+                                </div>
                                 <div
                                   style={{
                                     position: 'absolute',
@@ -1657,26 +1658,24 @@ function App() {
                                 />
                                 {pageDimensions[`page2_${pageNumber}`] && (
                                   <>
-                                    {isInRange && (
-                                      <div 
-                                        className="grid-overlay-container"
-                                        style={{
-                                          position: 'absolute',
-                                          top: 0,
-                                          left: 0,
-                                          pointerEvents: 'none'
-                                        }}
-                                      >
-                                        <GridOverlay 
-                                          pageWidth={pageDimensions[`page2_${pageNumber}`].width} 
-                                          pageHeight={pageDimensions[`page2_${pageNumber}`].height} 
-                                          isBackPage={true}
-                                          pageOffset={pageNumber - startPage}
-                                          mode={mode}
-                                          startingCardNumber={startingCardNumber}
-                                        />
-                                      </div>
-                                    )}
+                                    <div 
+                                      className="grid-overlay-container"
+                                      style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        pointerEvents: 'none'
+                                      }}
+                                    >
+                                      <GridOverlay 
+                                        pageWidth={pageDimensions[`page2_${pageNumber}`].width} 
+                                        pageHeight={pageDimensions[`page2_${pageNumber}`].height} 
+                                        isBackPage={true}
+                                        pageOffset={pageNumber - startPage}
+                                        mode={mode}
+                                        startingCardNumber={startingCardNumber}
+                                      />
+                                    </div>
                                     <div
                                       style={{
                                         position: 'absolute',
