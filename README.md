@@ -12,3 +12,4 @@ please let us know on the #cardcutter [Discord](https://discord.gg/sJVbJcd) chan
 * Add guide on how to import that zip into probability
 * Add guide on how to combine multiple export zips
 * It would be better if you could draw grids on the page, and save/open the config/grids as a file
+* Record video on slicing a pdf from dextrous and importing/playing in Probability
